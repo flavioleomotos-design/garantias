@@ -1,0 +1,19 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tab {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  columns       String[] // Armazena os nomes das colunas da aba
+  hiddenColumns String[] // Colunas ocultas
+  customColumns String[] // Colunas criadas pelo usuário
+  rows          Json     // Armazena as linhas de dados em formato JSON flexível
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
