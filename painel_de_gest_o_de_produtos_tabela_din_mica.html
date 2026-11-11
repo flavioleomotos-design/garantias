@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Estoque e Produtos - Google Sheets API</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-full text-slate-800 font-sans flex flex-col bg-slate-50">
+
+    <!-- Header / Navbar -->
+    <header class="bg-brand-900 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-600 p-2 rounded-lg text-white">
+                        <i class="fa-solid fa-boxes-packing text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">AgroControl - Gestão de Itens</h1>
+                        <p class="text-xs text-brand-100 flex items-center gap-1">
+                            <span>Planilha:</span>
+                            <span class="font-mono bg-brand-800 px-1.5 py-0.5 rounded text-[10px]" title="ID da Planilha">1iMZCY...cu4</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- API Status & Action Buttons -->
+                <div class="flex items-center space-x-3">
+                    <div id="connectionBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-200 border border-amber-500/30">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span id="connectionText">Modo Demonstração (Local)</span>
+                    </div>
+
+                    <button onclick="openModal('configModal')" class="bg-brand-700 hover:bg-brand-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-brand-600 shadow-sm">
+                        <i class="fa-solid fa-plug text-brand-100"></i>
+                        <span class="hidden md:inline">Conectar Google Sheets</span>
+                    </button>
+                    
+                    <button onclick="syncData()" title="Atualizar Dados" class="bg-brand-800 hover:bg-brand-700 text-white p-2 rounded-lg text-sm transition">
+                        <i id="syncIcon" class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Tab Bar & Toolbar Navigation -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Tabs list -->
+            <div class="flex items-center space-x-1 overflow-x-auto max-w-full py-1" id="tabContainer">
+                <!-- Dynamic tabs -->
+            </div>
+            
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="openModal('newTabModal')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-folder-plus text-brand-600"></i> Nova Aba
+                </button>
+            </div>
+        </div>
+
+        <!-- Dynamic Column & Item Actions Bar -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Add New Item Button -->
+                <button onclick="openModal('newItemModal')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-plus-circle"></i> Adicionar Novo Item
+                </button>
+                
+                <div class="h-4 w-px bg-slate-300 hidden md:block"></div>
+
+                <!-- Column Management Actions -->
+                <button onclick="openModal('addColumnModal')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-columns"></i> Criar Nova Coluna
+                </button>
+
+                <button onclick="openModal('hideColumnModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-eye-slash"></i> Ocultar / Mostrar Colunas
+                </button>
+
+                <button onclick="openModal('deleteColumnModal')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-trash-can"></i> Apagar Coluna
+                </button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative w-full md:w-64">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Buscar item, código, fornecedor..." 
+                    class="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toastNotification" class="hidden transition-all duration-300 p-4 rounded-xl shadow-sm flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i id="toastIcon" class="text-xl"></i>
+                <p id="toastMessage" class="text-sm font-medium"></p>
+            </div>
+            <button onclick="closeToast()" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Dashboard Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saída</p>
+                        <h3 class="text-2xl font-bold text-blue-600 mt-1" id="statSaida">0</h3>
+                    </div>
+                    <span class="p-2 bg-blue-50 text-blue-600 rounded-lg text-sm"><i class="fa-solid fa-truck-ramp-box"></i></span>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Separado</p>
+                        <h3 class="text-2xl font-bold text-amber-600 mt-1" id="statSeparado">0</h3>
+                    </div>
+                    <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-sm"><i class="fa-solid fa-boxes-stacked"></i></span>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enviado</p>
+                        <h3 class="text-2xl font-bold text-purple-600 mt-1" id="statEnviado">0</h3>
+                    </div>
+                    <span class="p-2 bg-purple-50 text-purple-600 rounded-lg text-sm"><i class="fa-solid fa-paper-plane"></i></span>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Finalizado</p>
+                        <h3 class="text-2xl font-bold text-emerald-600 mt-1" id="statFinalizado">0</h3>
+                    </div>
+                    <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm"><i class="fa-solid fa-circle-check"></i></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Items Table -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div class="overflow-x-auto flex-1">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 border-b border-slate-200 text-[11px] uppercase tracking-wider font-bold text-slate-600" id="tableHeaderRow">
+                            <!-- Columns injected dynamically -->
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-slate-100 text-xs">
+                        <!-- Rows injected dynamically -->
+                    </tbody>
+                </table>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden py-12 text-center">
+                    <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-3"></i>
+                    <p class="text-slate-500 text-sm font-medium">Nenhum item cadastrado nesta aba.</p>
+                    <p class="text-xs text-slate-400 mt-1">Clique em "Adicionar Novo Item" para preencher a tabela.</p>
+                </div>
+            </div>
+
+            <!-- Footer Summary -->
+            <div class="px-4 py-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-xs text-slate-500">
+                <span id="recordCount">Total: 0 itens</span>
+                <span class="italic">Planilha Google ID: <span class="font-mono">1iMZCYJpcIOLNZNHp4912MnzshgtA78vrq_XV247lcu4</span></span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Adicionar Novo Item -->
+    <div id="newItemModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle text-brand-600"></i> Adicionar Novo Item na Tabela
+                </h3>
+                <button onclick="closeModal('newItemModal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="newItemForm" onsubmit="handleAddItemSubmit(event)" class="space-y-4 text-xs">
+                <div id="dynamicFormFields" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <!-- Dynamic fields will be rendered here based on active columns -->
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('newItemModal')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition shadow-sm">Adicionar à Tabela</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Criar Nova Coluna -->
+    <div id="addColumnModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-columns text-emerald-600"></i> Criar Nova Coluna
+                </h3>
+                <button onclick="closeModal('addColumnModal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="handleCreateColumn(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Nome da Nova Coluna *</label>
+                    <input type="text" id="newColumnName" required placeholder="Ex: Lote, Validade, Localização" 
+                        class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('addColumnModal')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition shadow-sm">Criar Coluna</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Ocultar / Mostrar Colunas -->
+    <div id="hideColumnModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-eye-slash text-slate-600"></i> Visibilidade das Colunas
+                </h3>
+                <button onclick="closeModal('hideColumnModal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="columnVisibilityList" class="space-y-2 max-h-60 overflow-y-auto py-2">
+                <!-- Checkboxes injected dynamically -->
+            </div>
+            <div class="flex justify-end pt-3 border-t border-slate-100 mt-4">
+                <button type="button" onclick="closeModal('hideColumnModal')" class="px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition">Concluído</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Apagar Coluna -->
+    <div id="deleteColumnModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-trash-can text-rose-600"></i> Apagar Coluna
+                </h3>
+                <button onclick="closeModal('deleteColumnModal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="handleDeleteColumn(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Selecione a Coluna para Excluir *</label>
+                    <select id="columnToDeleteSelect" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none bg-white">
+                        <!-- Options injected dynamically -->
+                    </select>
+                    <p class="text-[11px] text-rose-500 mt-1"><i class="fa-solid fa-triangle-exclamation"></i> Colunas padrão estruturais não podem ser apagadas.</p>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('deleteColumnModal')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition shadow-sm">Apagar Coluna</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Criar Nova Aba -->
+    <div id="newTabModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-folder-plus text-brand-600"></i> Criar Nova Aba
+                </h3>
+                <button onclick="closeModal('newTabModal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="createNewTab(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Nome da Nova Aba *</label>
+                    <input type="text" id="newTabName" required placeholder="Ex: Estoque_Março ou Defeituosos" 
+                        class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('newTabModal')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition shadow-sm">Criar Aba</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Configuração do Web App / Google Apps Script -->
+    <div id="configModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-brands fa-google text-emerald-600"></i> Conexão com Google Sheets (API Apps Script)
+                </h3>
+                <button onclick="closeModal('configModal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <label class="block text-xs font-bold text-slate-700 mb-1">URL do Web App executável (Google Apps Script):</label>
+                <div class="flex gap-2">
+                    <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" 
+                        class="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg font-mono focus:ring-2 focus:ring-brand-500 outline-none">
+                    <button onclick="saveScriptUrl()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition">Salvar URL</button>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-2">Sem URL configurada, a aplicação utiliza <strong>LocalStorage</strong> para rodar localmente.</p>
+            </div>
+
+            <div class="space-y-4 text-xs text-slate-600">
+                <h4 class="font-bold text-slate-800 uppercase text-[11px] tracking-wider">Como integrar com o Google Apps Script:</h4>
+                <ol class="list-decimal list-inside space-y-1.5 leading-relaxed">
+                    <li>Abra a planilha Google (ID: <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono">1iMZCYJpcIOLNZNHp4912MnzshgtA78vrq_XV247lcu4</code>).</li>
+                    <li>Acesse <strong>Extensões</strong> &gt; <strong>Apps Script</strong>.</li>
+                    <li>Substitua o código pelo trecho abaixo e clique em <strong>Implantar</strong> &gt; <strong>Nova implantação</strong>.</li>
+                    <li>Defina o acesso para <strong>Qualquer pessoa (Anyone)</strong> e copie a URL gerada para o campo acima.</li>
+                </ol>
+
+                <div class="mt-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-semibold text-slate-700">Código Google Apps Script (Colunas Dinâmicas + Itens):</span>
+                        <button onclick="copyAppsScriptCode()" class="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-copy"></i> Copiar Código
+                        </button>
+                    </div>
+                    <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto text-[11px] font-mono leading-relaxed" id="appsScriptCode">
+// GOOGLE APPS SCRIPT CODE
+function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var action = e.parameter.action;
+  
+  if (action === 'getTabs') {
+    var sheets = ss.getSheets();
+    var names = sheets.map(function(s) { return s.getName(); });
+    return response({ status: 'success', tabs: names });
+  }
+  
+  if (action === 'getData') {
+    var sheetName = e.parameter.sheet || ss.getSheets()[0].getName();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return response({ status: 'error', message: 'Aba não encontrada' });
+    var data = sheet.getDataRange().getValues();
+    return response({ status: 'success', data: data });
+  }
+  
+  return response({ status: 'error', message: 'Ação inválida' });
+}
+
+function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var contents = JSON.parse(e.postData.contents);
+    var action = contents.action;
+    
+    if (action === 'createTab') {
+      var newSheet = ss.insertSheet(contents.tabName);
+      var defaultHeaders = ['ID', 'Status', 'Cód. Barras', 'Descrição', 'Fornecedor', 'Defeito', 'Quantidade', 'Imagem', 'Observação', 'Anotações'];
+      newSheet.appendRow(defaultHeaders);
+      return response({ status: 'success' });
+    }
+    
+    if (action === 'addRow') {
+      var sheet = ss.getSheetByName(contents.sheet);
+      if (!sheet) return response({ status: 'error', message: 'Aba não encontrada' });
+      sheet.appendRow(contents.row);
+      return response({ status: 'success' });
+    }
+    
+    if (action === 'updateStatus') {
+      var sheet = ss.getSheetByName(contents.sheet);
+      sheet.getRange(contents.rowIndex, 2).setValue(contents.status); // Coluna 2 = Status
+      return response({ status: 'success' });
+    }
+    
+    if (action === 'deleteRow') {
+      var sheet = ss.getSheetByName(contents.sheet);
+      sheet.deleteRow(contents.rowIndex);
+      return response({ status: 'success' });
+    }
+
+    if (action === 'addColumn') {
+      var sheet = ss.getSheetByName(contents.sheet);
+      var lastCol = sheet.getLastColumn();
+      sheet.getRange(1, lastCol + 1).setValue(contents.columnName);
+      return response({ status: 'success' });
+    }
+  } catch (err) {
+    return response({ status: 'error', message: err.toString() });
+  }
+}
+
+function response(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+</pre>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeModal('configModal')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-medium transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Standard Mandatory Columns
+        const DEFAULT_COLUMNS = [
+            { key: 'status', label: 'Status', fixed: true },
+            { key: 'barcode', label: 'Cód. Barras', fixed: true },
+            { key: 'description', label: 'Descrição', fixed: true },
+            { key: 'supplier', label: 'Fornecedor', fixed: true },
+            { key: 'defect', label: 'Defeito', fixed: true },
+            { key: 'quantity', label: 'Quantidade', fixed: true },
+            { key: 'image', label: 'Imagem', fixed: true },
+            { key: 'observation', label: 'Observação', fixed: true },
+            { key: 'notes', label: 'Anotações', fixed: true }
+        ];
+
+        // State Management
+        let appState = {
+            scriptUrl: localStorage.getItem('agro_script_url') || '',
+            activeTab: 'Geral',
+            tabs: ['Geral', 'Lote_Defeitos'],
+            // Track dynamic columns per tab
+            columnsByTab: {
+                'Geral': [...DEFAULT_COLUMNS],
+                'Lote_Defeitos': [...DEFAULT_COLUMNS]
+            },
+            // Track hidden columns
+            hiddenColumnsByTab: {
+                'Geral': [],
+                'Lote_Defeitos': []
+            },
+            // Table items per tab
+            dataByTab: {
+                'Geral': [
+                    {
+                        id: '1',
+                        status: 'Separado',
+                        barcode: '7891234567890',
+                        description: 'Milho Ensacado 50kg',
+                        supplier: 'AgroSul LTDA',
+                        defect: 'Nenhum',
+                        quantity: 100,
+                        image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=100&auto=format&fit=crop&q=60',
+                        observation: 'Carga prioridade alta',
+                        notes: 'Conferido por João em 10/03'
+                    },
+                    {
+                        id: '2',
+                        status: 'Saída',
+                        barcode: '7899876543210',
+                        description: 'Semente de Soja Transgênica',
+                        supplier: 'Sementes Raio',
+                        defect: 'Embalagem levemente rasgada',
+                        quantity: 25,
+                        image: '',
+                        observation: 'Dar desconto na entrega',
+                        notes: 'Aguardando guincho'
+                    }
+                ],
+                'Lote_Defeitos': []
+            }
+        };
+
+        // App Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+
+        function initApp() {
+            const savedState = localStorage.getItem('agro_v2_data');
+            if (savedState && !appState.scriptUrl) {
+                try {
+                    const parsed = JSON.parse(savedState);
+                    appState.tabs = parsed.tabs || appState.tabs;
+                    appState.columnsByTab = parsed.columnsByTab || appState.columnsByTab;
+                    appState.hiddenColumnsByTab = parsed.hiddenColumnsByTab || appState.hiddenColumnsByTab;
+                    appState.dataByTab = parsed.dataByTab || appState.dataByTab;
+                } catch(e) { console.error('Error loading saved state:', e); }
+            }
+
+            updateConnectionUI();
+
+            if (appState.scriptUrl) {
+                syncData();
+            } else {
+                renderTabs();
+                renderTableData();
+            }
+        }
+
+        // Connection UI Badge
+        function updateConnectionUI() {
+            const badge = document.getElementById('connectionBadge');
+            const text = document.getElementById('connectionText');
+            const scriptInput = document.getElementById('scriptUrlInput');
+
+            if (scriptInput) scriptInput.value = appState.scriptUrl;
+
+            if (appState.scriptUrl) {
+                badge.className = "hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-200 border border-emerald-500/30";
+                text.innerText = "Conectado ao Google Sheets";
+            } else {
+                badge.className = "hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-200 border border-amber-500/30";
+                text.innerText = "Modo Demonstração (Local)";
+            }
+        }
+
+        // Render Tabs
+        function renderTabs() {
+            const container = document.getElementById('tabContainer');
+            container.innerHTML = '';
+
+            appState.tabs.forEach(tab => {
+                const isActive = tab === appState.activeTab;
+                const btn = document.createElement('button');
+                btn.onclick = () => switchTab(tab);
+                btn.className = `px-3.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2 shrink-0 ${
+                    isActive 
+                    ? 'bg-brand-600 text-white shadow-sm' 
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`;
+                btn.innerHTML = `<i class="fa-solid fa-table-list text-[10px]"></i> ${tab}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function switchTab(tabName) {
+            appState.activeTab = tabName;
+            if (!appState.columnsByTab[tabName]) {
+                appState.columnsByTab[tabName] = [...DEFAULT_COLUMNS];
+            }
+            if (!appState.hiddenColumnsByTab[tabName]) {
+                appState.hiddenColumnsByTab[tabName] = [];
+            }
+            renderTabs();
+            renderTableData();
+        }
+
+        // Dynamic Modals Helper
+        function openModal(id) {
+            if (id === 'newItemModal') buildDynamicFormFields();
+            if (id === 'hideColumnModal') buildVisibilityList();
+            if (id === 'deleteColumnModal') buildDeleteColumnSelect();
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Create New Tab
+        async function createNewTab(e) {
+            e.preventDefault();
+            const tabNameInput = document.getElementById('newTabName');
+            const tabName = tabNameInput.value.trim().replace(/\s+/g, '_');
+
+            if (!tabName) return;
+            if (appState.tabs.includes(tabName)) {
+                showToast('Uma aba com este nome já existe!', 'error');
+                return;
+            }
+
+            if (appState.scriptUrl) {
+                showToast('Criando aba no Google Sheets...', 'info');
+                try {
+                    await fetch(appState.scriptUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'createTab', tabName: tabName })
+                    });
+                } catch(err) { console.error(err); }
+            }
+
+            appState.tabs.push(tabName);
+            appState.columnsByTab[tabName] = [...DEFAULT_COLUMNS];
+            appState.hiddenColumnsByTab[tabName] = [];
+            appState.dataByTab[tabName] = [];
+            appState.activeTab = tabName;
+
+            saveLocalBackup();
+            renderTabs();
+            renderTableData();
+            closeModal('newTabModal');
+            tabNameInput.value = '';
+            showToast(`Aba "${tabName}" criada!`, 'success');
+        }
+
+        // 1. Function: Create New Column
+        async function handleCreateColumn(e) {
+            e.preventDefault();
+            const input = document.getElementById('newColumnName');
+            const colName = input.value.trim();
+
+            if (!colName) return;
+
+            const cols = appState.columnsByTab[appState.activeTab] || [...DEFAULT_COLUMNS];
+            const colKey = colName.toLowerCase().replace(/\s+/g, '_');
+
+            if (cols.some(c => c.label.toLowerCase() === colName.toLowerCase())) {
+                showToast('Já existe uma coluna com esse nome nesta aba!', 'error');
+                return;
+            }
+
+            const newColObj = { key: colKey, label: colName, fixed: false };
+            cols.push(newColObj);
+            appState.columnsByTab[appState.activeTab] = cols;
+
+            if (appState.scriptUrl) {
+                try {
+                    await fetch(appState.scriptUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'addColumn',
+                            sheet: appState.activeTab,
+                            columnName: colName
+                        })
+                    });
+                } catch(err) { console.error(err); }
+            }
+
+            saveLocalBackup();
+            renderTableData();
+            closeModal('addColumnModal');
+            input.value = '';
+            showToast(`Coluna "${colName}" adicionada com sucesso!`, 'success');
+        }
+
+        // 2. Function: Delete Column
+        function buildDeleteColumnSelect() {
+            const select = document.getElementById('columnToDeleteSelect');
+            select.innerHTML = '';
+            const cols = appState.columnsByTab[appState.activeTab] || [];
+            const deletable = cols.filter(c => !c.fixed);
+
+            if (deletable.length === 0) {
+                select.innerHTML = '<option value="">Nenhuma coluna personalizada disponível para exclusão</option>';
+            } else {
+                deletable.forEach(c => {
+                    select.innerHTML += `<option value="${c.key}">${c.label}</option>`;
+                });
+            }
+        }
+
+        async function handleDeleteColumn(e) {
+            e.preventDefault();
+            const colKey = document.getElementById('columnToDeleteSelect').value;
+            if (!colKey) return;
+
+            let cols = appState.columnsByTab[appState.activeTab];
+            const colObj = cols.find(c => c.key === colKey);
+
+            if (colObj && colObj.fixed) {
+                showToast('Não é permitido apagar colunas estruturais.', 'error');
+                return;
+            }
+
+            cols = cols.filter(c => c.key !== colKey);
+            appState.columnsByTab[appState.activeTab] = cols;
+
+            // Clean item data properties
+            const items = appState.dataByTab[appState.activeTab] || [];
+            items.forEach(item => delete item[colKey]);
+
+            saveLocalBackup();
+            renderTableData();
+            closeModal('deleteColumnModal');
+            showToast('Coluna removida da visualização local!', 'success');
+        }
+
+        // 3. Function: Hide / Show Columns
+        function buildVisibilityList() {
+            const container = document.getElementById('columnVisibilityList');
+            container.innerHTML = '';
+
+            const cols = appState.columnsByTab[appState.activeTab] || [];
+            const hiddenKeys = appState.hiddenColumnsByTab[appState.activeTab] || [];
+
+            cols.forEach(col => {
+                const isChecked = !hiddenKeys.includes(col.key);
+                const item = document.createElement('label');
+                item.className = "flex items-center justify-between p-2 rounded hover:bg-slate-50 cursor-pointer border border-slate-100";
+                item.innerHTML = `
+                    <span class="text-xs font-medium text-slate-700">${col.label} ${col.fixed ? '<span class="text-[10px] text-slate-400 font-normal">(Padrão)</span>' : ''}</span>
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleColumnVisibility('${col.key}', this.checked)" class="rounded text-brand-600 focus:ring-brand-500">
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function toggleColumnVisibility(colKey, isVisible) {
+            let hiddenKeys = appState.hiddenColumnsByTab[appState.activeTab] || [];
+            if (isVisible) {
+                hiddenKeys = hiddenKeys.filter(k => k !== colKey);
+            } else {
+                if (!hiddenKeys.includes(colKey)) hiddenKeys.push(colKey);
+            }
+            appState.hiddenColumnsByTab[appState.activeTab] = hiddenKeys;
+            saveLocalBackup();
+            renderTableData();
+        }
+
+        // 4. Function: Add New Item Modal Form Builder
+        function buildDynamicFormFields() {
+            const container = document.getElementById('dynamicFormFields');
+            container.innerHTML = '';
+
+            const cols = appState.columnsByTab[appState.activeTab] || DEFAULT_COLUMNS;
+
+            cols.forEach(col => {
+                const wrapper = document.createElement('div');
+                if (col.key === 'observation' || col.key === 'notes' || col.key === 'description') {
+                    wrapper.className = "md:col-span-2";
+                }
+
+                if (col.key === 'status') {
+                    wrapper.innerHTML = `
+                        <label class="block font-medium text-slate-700 mb-1">Status *</label>
+                        <select name="status" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white focus:ring-2 focus:ring-brand-500">
+                            <option value="Saída">Saída</option>
+                            <option value="Separado">Separado</option>
+                            <option value="Enviado">Enviado</option>
+                            <option value="Finalizado">Finalizado</option>
+                        </select>
+                    `;
+                } else if (col.key === 'quantity') {
+                    wrapper.innerHTML = `
+                        <label class="block font-medium text-slate-700 mb-1">${col.label} *</label>
+                        <input type="number" step="1" name="${col.key}" required placeholder="0" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500">
+                    `;
+                } else if (col.key === 'observation' || col.key === 'notes') {
+                    wrapper.innerHTML = `
+                        <label class="block font-medium text-slate-700 mb-1">${col.label}</label>
+                        <textarea name="${col.key}" rows="2" placeholder="Digite ${col.label.toLowerCase()}..." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                    `;
+                } else {
+                    wrapper.innerHTML = `
+                        <label class="block font-medium text-slate-700 mb-1">${col.label}</label>
+                        <input type="text" name="${col.key}" placeholder="${col.label}..." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500">
+                    `;
+                }
+                container.appendChild(wrapper);
+            });
+        }
+
+        // Submit New Item Form
+        async function handleAddItemSubmit(e) {
+            e.preventDefault();
+            const form = document.getElementById('newItemForm');
+            const formData = new FormData(form);
+
+            const newItem = { id: Date.now().toString() };
+            const cols = appState.columnsByTab[appState.activeTab] || DEFAULT_COLUMNS;
+
+            cols.forEach(c => {
+                newItem[c.key] = formData.get(c.key) || '';
+            });
+
+            if (appState.scriptUrl) {
+                showToast('Enviando item para o Google Sheets...', 'info');
+                try {
+                    // Create row array based on columns
+                    const rowArray = [newItem.id];
+                    cols.forEach(c => rowArray.push(newItem[c.key]));
+
+                    await fetch(appState.scriptUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'addRow',
+                            sheet: appState.activeTab,
+                            row: rowArray
+                        })
+                    });
+                } catch (err) { console.error(err); }
+            }
+
+            if (!appState.dataByTab[appState.activeTab]) {
+                appState.dataByTab[appState.activeTab] = [];
+            }
+            appState.dataByTab[appState.activeTab].push(newItem);
+
+            saveLocalBackup();
+            renderTableData();
+            closeModal('newItemModal');
+            form.reset();
+            showToast('Novo item adicionado com sucesso!', 'success');
+        }
+
+        // Update Item Status
+        async function updateStatus(id, newStatus) {
+            const list = appState.dataByTab[appState.activeTab] || [];
+            const index = list.findIndex(item => item.id === id);
+            
+            if (index !== -1) {
+                list[index].status = newStatus;
+
+                if (appState.scriptUrl) {
+                    try {
+                        const rowIndex = index + 2; 
+                        await fetch(appState.scriptUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'updateStatus',
+                                sheet: appState.activeTab,
+                                rowIndex: rowIndex,
+                                status: newStatus
+                            })
+                        });
+                    } catch (err) { console.error(err); }
+                }
+
+                saveLocalBackup();
+                renderTableData();
+                showToast(`Status atualizado para "${newStatus}"`, 'success');
+            }
+        }
+
+        // Delete Row Item
+        async function deleteRecord(id) {
+            if (!confirm('Deseja realmente excluir este item da tabela?')) return;
+
+            const list = appState.dataByTab[appState.activeTab] || [];
+            const index = list.findIndex(item => item.id === id);
+
+            if (index !== -1) {
+                if (appState.scriptUrl) {
+                    try {
+                        const rowIndex = index + 2;
+                        await fetch(appState.scriptUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'deleteRow',
+                                sheet: appState.activeTab,
+                                rowIndex: rowIndex
+                            })
+                        });
+                    } catch(err) { console.error(err); }
+                }
+
+                list.splice(index, 1);
+                saveLocalBackup();
+                renderTableData();
+                showToast('Item excluído da tabela!', 'success');
+            }
+        }
+
+        // Main Render Table Data Function
+        function renderTableData() {
+            const headerRow = document.getElementById('tableHeaderRow');
+            const tbody = document.getElementById('dataTableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            headerRow.innerHTML = '';
+            tbody.innerHTML = '';
+
+            const activeCols = appState.columnsByTab[appState.activeTab] || DEFAULT_COLUMNS;
+            const hiddenKeys = appState.hiddenColumnsByTab[appState.activeTab] || [];
+            const visibleCols = activeCols.filter(c => !hiddenKeys.includes(c.key));
+
+            // Render Table Header Columns
+            visibleCols.forEach(col => {
+                const th = document.createElement('th');
+                th.className = "py-3 px-4 font-bold text-slate-700 whitespace-nowrap";
+                th.innerText = col.label;
+                headerRow.appendChild(th);
+            });
+            // Actions Header Column
+            const thAction = document.createElement('th');
+            thAction.className = "py-3 px-4 font-bold text-slate-700 text-right whitespace-nowrap";
+            thAction.innerText = "Ações";
+            headerRow.appendChild(thAction);
+
+            // Filter & Search Items
+            const items = appState.dataByTab[appState.activeTab] || [];
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = items.filter(item => {
+                return visibleCols.some(col => {
+                    const val = (item[col.key] || '').toString().toLowerCase();
+                    return val.includes(searchQuery);
+                });
+            });
+
+            updateStats(items);
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50/80 transition border-b border-slate-100";
+
+                    visibleCols.forEach(col => {
+                        const td = document.createElement('td');
+                        td.className = "py-3 px-4 text-slate-700 align-middle";
+
+                        if (col.key === 'status') {
+                            td.innerHTML = getStatusBadgeHtml(item.id, item.status || 'Saída');
+                        } else if (col.key === 'image') {
+                            const imgUrl = item.image;
+                            if (imgUrl) {
+                                td.innerHTML = `
+                                    <a href="${escapeHtml(imgUrl)}" target="_blank" class="block w-8 h-8 rounded border border-slate-200 overflow-hidden bg-slate-100 hover:scale-110 transition">
+                                        <img src="${escapeHtml(imgUrl)}" alt="Item" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/40x40/e2e8f0/64748b?text=Erro';">
+                                    </a>
+                                `;
+                            } else {
+                                td.innerHTML = `<span class="text-slate-300 italic text-[10px]">Sem img</span>`;
+                            }
+                        } else if (col.key === 'barcode') {
+                            td.innerHTML = `<span class="font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded text-[11px]">${escapeHtml(item.barcode || '-')}</span>`;
+                        } else if (col.key === 'quantity') {
+                            td.innerHTML = `<span class="font-semibold text-slate-800">${item.quantity || 0}</span>`;
+                        } else {
+                            td.innerText = item[col.key] || '-';
+                        }
+                        tr.appendChild(td);
+                    });
+
+                    // Action Cell
+                    const tdAction = document.createElement('td');
+                    tdAction.className = "py-3 px-4 text-right align-middle";
+                    tdAction.innerHTML = `
+                        <button onclick="deleteRecord('${item.id}')" class="text-rose-500 hover:text-rose-700 p-1.5 rounded hover:bg-rose-50 transition" title="Excluir item">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    `;
+                    tr.appendChild(tdAction);
+
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('recordCount').innerText = `Total: ${filtered.length} de ${items.length} itens`;
+        }
+
+        // Status Badge Selector Generator
+        function getStatusBadgeHtml(id, currentStatus) {
+            const styles = {
+                'Saída': 'bg-blue-50 text-blue-700 border-blue-200',
+                'Separado': 'bg-amber-50 text-amber-700 border-amber-200',
+                'Enviado': 'bg-purple-50 text-purple-700 border-purple-200',
+                'Finalizado': 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            };
+            const styleClass = styles[currentStatus] || 'bg-slate-50 text-slate-700 border-slate-200';
+
+            return `
+                <div class="relative inline-block">
+                    <select onchange="updateStatus('${id}', this.value)" 
+                        class="text-[11px] font-bold px-2 py-1 rounded-full border cursor-pointer outline-none appearance-none pr-5 ${styleClass}">
+                        <option value="Saída" ${currentStatus === 'Saída' ? 'selected' : ''}>Saída</option>
+                        <option value="Separado" ${currentStatus === 'Separado' ? 'selected' : ''}>Separado</option>
+                        <option value="Enviado" ${currentStatus === 'Enviado' ? 'selected' : ''}>Enviado</option>
+                        <option value="Finalizado" ${currentStatus === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] pointer-events-none opacity-60"></i>
+                </div>
+            `;
+        }
+
+        // Update Top Cards Stats
+        function updateStats(items) {
+            let saida = 0, separado = 0, enviado = 0, finalizado = 0;
+            items.forEach(i => {
+                if (i.status === 'Saída') saida++;
+                if (i.status === 'Separado') separado++;
+                if (i.status === 'Enviado') enviado++;
+                if (i.status === 'Finalizado') finalizado++;
+            });
+
+            document.getElementById('statSaida').innerText = saida;
+            document.getElementById('statSeparado').innerText = separado;
+            document.getElementById('statEnviado').innerText = enviado;
+            document.getElementById('statFinalizado').innerText = finalizado;
+        }
+
+        function applyFilters() {
+            renderTableData();
+        }
+
+        // Sync Data with Google Apps Script
+        async function syncData() {
+            const syncIcon = document.getElementById('syncIcon');
+            syncIcon.classList.add('fa-spin');
+
+            if (!appState.scriptUrl) {
+                setTimeout(() => {
+                    syncIcon.classList.remove('fa-spin');
+                    renderTabs();
+                    renderTableData();
+                    showToast('Dados sincronizados localmente.', 'info');
+                }, 500);
+                return;
+            }
+
+            try {
+                const resTabs = await fetch(`${appState.scriptUrl}?action=getTabs`);
+                const tabsData = await resTabs.json();
+                
+                if (tabsData.status === 'success' && tabsData.tabs.length > 0) {
+                    appState.tabs = tabsData.tabs;
+                    if (!appState.tabs.includes(appState.activeTab)) {
+                        appState.activeTab = appState.tabs[0];
+                    }
+                }
+
+                const resData = await fetch(`${appState.scriptUrl}?action=getData&sheet=${encodeURIComponent(appState.activeTab)}`);
+                const rowsData = await resData.json();
+
+                if (rowsData.status === 'success' && rowsData.data && rowsData.data.length > 0) {
+                    const rawRows = rowsData.data.slice(1); // skip header
+                    appState.dataByTab[appState.activeTab] = rawRows.map((r, i) => ({
+                        id: r[0] ? r[0].toString() : (i + 1).toString(),
+                        status: r[1] || 'Saída',
+                        barcode: r[2] || '',
+                        description: r[3] || '',
+                        supplier: r[4] || '',
+                        defect: r[5] || '',
+                        quantity: r[6] || 0,
+                        image: r[7] || '',
+                        observation: r[8] || '',
+                        notes: r[9] || ''
+                    }));
+                }
+
+                saveLocalBackup();
+                showToast('Dados sincronizados com a Planilha Google!', 'success');
+            } catch (err) {
+                console.error("Erro na sincronização:", err);
+                showToast('Erro ao sincronizar. Exibindo cópia local.', 'error');
+            } finally {
+                syncIcon.classList.remove('fa-spin');
+                renderTabs();
+                renderTableData();
+            }
+        }
+
+        function saveScriptUrl() {
+            const url = document.getElementById('scriptUrlInput').value.trim();
+            appState.scriptUrl = url;
+            localStorage.setItem('agro_script_url', url);
+            updateConnectionUI();
+            closeModal('configModal');
+            showToast('URL salva com sucesso!', 'success');
+            syncData();
+        }
+
+        function saveLocalBackup() {
+            localStorage.setItem('agro_v2_data', JSON.stringify({
+                tabs: appState.tabs,
+                columnsByTab: appState.columnsByTab,
+                hiddenColumnsByTab: appState.hiddenColumnsByTab,
+                dataByTab: appState.dataByTab
+            }));
+        }
+
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            const icon = document.getElementById('toastIcon');
+            const text = document.getElementById('toastMessage');
+
+            text.innerText = msg;
+
+            if (type === 'success') {
+                toast.className = "p-4 rounded-xl shadow-md flex items-center justify-between bg-emerald-600 text-white transition-all duration-300";
+                icon.className = "fa-solid fa-circle-check text-xl";
+            } else if (type === 'error') {
+                toast.className = "p-4 rounded-xl shadow-md flex items-center justify-between bg-rose-600 text-white transition-all duration-300";
+                icon.className = "fa-solid fa-triangle-exclamation text-xl";
+            } else {
+                toast.className = "p-4 rounded-xl shadow-md flex items-center justify-between bg-slate-800 text-white transition-all duration-300";
+                icon.className = "fa-solid fa-circle-info text-xl";
+            }
+
+            toast.classList.remove('hidden');
+            setTimeout(() => { closeToast(); }, 4000);
+        }
+
+        function closeToast() {
+            document.getElementById('toastNotification').classList.add('hidden');
+        }
+
+        function copyAppsScriptCode() {
+            const codeText = document.getElementById('appsScriptCode').innerText;
+            const textArea = document.createElement('textarea');
+            textArea.value = codeText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Código copiado para a área de transferência!', 'success');
+            } catch (err) {
+                showToast('Não foi possível copiar automaticamente.', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
