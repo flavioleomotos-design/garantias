@@ -432,25 +432,31 @@
         }
 
         function syncWithGoogleSheets(initial = false) {
-            if (!state.scriptUrl) return;
-            fetch(`${state.scriptUrl}?action=getData&sheet=${encodeURIComponent(state.currentSheet)}`)
-                .then(res => res.json())
-                .then(res => {
-                    if (res.status === 'success' && res.data && res.data.length > 0) {
-                        const cols = res.data[0];
-                        const rows = res.data.slice(1);
-                        state.sheets[state.currentSheet] = {
-                            columns: cols,
-                            hiddenColumns: [],
-                            customColumns: cols.slice(DEFAULT_COLUMNS.length),
-                            rows: rows
-                        };
-                        renderAll();
-                    }
-                })
-                .catch(err => console.log('Modo de sincronização restrito pelo navegador, usando cópia local.'));
-        }
-
+    if (!state.scriptUrl) return;
+    
+    // Tenta obter os dados da aba atual via Web App
+    const targetUrl = `${state.scriptUrl}?action=getData&sheet=${encodeURIComponent(state.currentSheet)}`;
+    
+    fetch(targetUrl, { redirect: 'follow' })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === 'success' && res.data && res.data.length > 0) {
+                const cols = res.data[0];
+                const rows = res.data.slice(1);
+                state.sheets[state.currentSheet] = {
+                    columns: cols,
+                    hiddenColumns: [],
+                    customColumns: cols.slice(DEFAULT_COLUMNS.length),
+                    rows: rows
+                };
+                renderAll();
+            }
+        })
+        .catch(err => {
+            console.log('Mantendo exibição local devido a restrições do navegador:', err);
+            renderAll();
+        });
+}
         window.onload = initApp;
     </script>
 </body>
