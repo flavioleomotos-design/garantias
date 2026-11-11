@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Garantias - Google Sheets</title>
+    <title>Painel de Garantias</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -17,11 +17,11 @@
                 <h1 class="text-xl font-bold">Gestão de Garantias & Produtores</h1>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="openConfigModal()" class="bg-indigo-600 hover:bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-indigo-500">
-                    <i class="fa-solid fa-gear"></i> Configurar Planilha
+                <button onclick="syncWithAPI()" class="bg-indigo-600 hover:bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-indigo-500">
+                    <i class="fa-solid fa-rotate"></i> Sincronizar Agora
                 </button>
-                <div id="syncStatusIndicator" class="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm">
-                    <i class="fa-solid fa-triangle-exclamation"></i> Modo Local / Não Sincronizado
+                <div id="syncStatusIndicator" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm">
+                    <i class="fa-solid fa-database"></i> Conectado ao Banco
                 </div>
             </div>
         </div>
@@ -76,21 +76,6 @@
         </div>
     </main>
 
-    <!-- Modal Configuração Apps Script -->
-    <div id="configModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl flex flex-col gap-4">
-            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <i class="fa-solid fa-link text-indigo-600"></i> Configurar Conexão com Google Sheets
-            </h2>
-            <p class="text-sm text-gray-600">Insira a URL do Web App gerada no Google Apps Script para sincronizar dados em tempo real:</p>
-            <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-            <div class="flex justify-end gap-3 mt-2">
-                <button onclick="closeConfigModal()" class="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg font-medium">Cancelar</button>
-                <button onclick="saveConfigUrl()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium">Salvar e Conectar</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal Nova Aba -->
     <div id="newSheetModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4">
@@ -144,16 +129,15 @@
 
     <script>
         const DEFAULT_COLUMNS = ['Status', 'Cód. Barras', 'Descrição', 'Fornecedor', 'Defeito', 'Quantidade', 'Imagem', 'Observação', 'Anotações'];
+        const API_BASE_URL = '/api/sheets'; // Aponta para a API na Vercel
+
         let state = {
-            scriptUrl: localStorage.getItem('scriptUrl') || '',
-            sheets: JSON.parse(localStorage.getItem('sheetsData')) || {
+            sheets: {
                 'Garantias': {
                     columns: [...DEFAULT_COLUMNS],
                     hiddenColumns: [],
                     customColumns: [],
-                    rows: [
-                        ['Pendente', '7891023456789', 'Exemplo de Produto A', 'Fornecedor X', 'Defeito de fábrica', '2', '', 'Observação teste', 'Nota interna']
-                    ]
+                    rows: []
                 }
             },
             currentSheet: 'Garantias'
@@ -162,28 +146,25 @@
         const statusOptions = ['Pendente', 'Saída', 'Separado', 'Enviado', 'Finalizado'];
 
         function initApp() {
-            if (state.scriptUrl) {
-                document.getElementById('scriptUrlInput').value = state.scriptUrl;
-                syncWithGoogleSheets(true);
-            } else {
-                renderAll();
-            }
+            syncWithAPI();
         }
 
         function renderAll() {
             renderTabs();
             renderTable();
-            updateSyncStatusUI();
         }
 
-        function updateSyncStatusUI() {
+        function setSyncStatus(isSyncing, isError = false) {
             const ind = document.getElementById('syncStatusIndicator');
-            if (state.scriptUrl) {
-                ind.className = "text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
-                ind.innerHTML = `<i class="fa-solid fa-cloud"></i> Sincronizado com Google Sheets`;
-            } else {
+            if (isError) {
+                ind.className = "text-xs bg-red-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
+                ind.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Erro de Conexão`;
+            } else if (isSyncing) {
                 ind.className = "text-xs bg-amber-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
-                ind.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Modo Local (Configure o Script)`;
+                ind.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...`;
+            } else {
+                ind.className = "text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
+                ind.innerHTML = `<i class="fa-solid fa-database"></i> Conectado ao Banco`;
             }
         }
 
@@ -285,18 +266,7 @@
             });
         }
 
-        // Modais
-        function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
-        function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
-        function saveConfigUrl() {
-            const url = document.getElementById('scriptUrlInput').value.trim();
-            state.scriptUrl = url;
-            localStorage.setItem('scriptUrl', url);
-            closeConfigModal();
-            updateSyncStatusUI();
-            if (url) syncWithGoogleSheets(true);
-        }
-
+        // Modais de Criação
         function openNewSheetModal() { document.getElementById('newSheetModal').classList.remove('hidden'); }
         function closeNewSheetModal() { document.getElementById('newSheetModal').classList.add('hidden'); }
         function createSheetSubmit() {
@@ -395,6 +365,7 @@
             }
             openManageColumnsModal();
             renderTable();
+            saveAndSync(); // Salva a configuração de colunas ocultas no banco
         }
 
         function deleteColumn(col) {
@@ -412,51 +383,61 @@
             saveAndSync();
         }
 
+        // Comunicação com a API Prisma (Vercel Serverless)
         function saveAndSync() {
-            localStorage.setItem('sheetsData', JSON.stringify(state.sheets));
-            if (state.scriptUrl) {
-                // Envia dados para o Google Apps Script
-                const sheet = state.sheets[state.currentSheet];
-                const payload = {
-                    action: 'saveData',
-                    sheet: state.currentSheet,
-                    rows: [sheet.columns, ...sheet.rows]
-                };
-                fetch(state.scriptUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                }).catch(err => console.error('Erro ao sincronizar:', err));
-            }
+            setSyncStatus(true);
+            const sheetData = state.sheets[state.currentSheet];
+            
+            fetch(API_BASE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sheetName: state.currentSheet,
+                    columns: sheetData.columns,
+                    hiddenColumns: sheetData.hiddenColumns,
+                    customColumns: sheetData.customColumns,
+                    rows: sheetData.rows
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    setSyncStatus(false);
+                } else {
+                    setSyncStatus(false, true);
+                }
+            })
+            .catch(err => {
+                console.error('Erro ao salvar:', err);
+                setSyncStatus(false, true);
+            });
         }
 
-        function syncWithGoogleSheets(initial = false) {
-    if (!state.scriptUrl) return;
-    
-    // Tenta obter os dados da aba atual via Web App
-    const targetUrl = `${state.scriptUrl}?action=getData&sheet=${encodeURIComponent(state.currentSheet)}`;
-    
-    fetch(targetUrl, { redirect: 'follow' })
-        .then(res => res.json())
-        .then(res => {
-            if (res.status === 'success' && res.data && res.data.length > 0) {
-                const cols = res.data[0];
-                const rows = res.data.slice(1);
-                state.sheets[state.currentSheet] = {
-                    columns: cols,
-                    hiddenColumns: [],
-                    customColumns: cols.slice(DEFAULT_COLUMNS.length),
-                    rows: rows
-                };
-                renderAll();
-            }
-        })
-        .catch(err => {
-            console.log('Mantendo exibição local devido a restrições do navegador:', err);
-            renderAll();
-        });
-}
+        function syncWithAPI() {
+            setSyncStatus(true);
+            fetch(API_BASE_URL)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success' && res.sheets) {
+                        state.sheets = res.sheets;
+                        // Define a aba inicial se disponível
+                        if (!state.sheets[state.currentSheet]) {
+                            state.currentSheet = Object.keys(state.sheets)[0] || 'Garantias';
+                        }
+                        renderAll();
+                        setSyncStatus(false);
+                    } else {
+                        setSyncStatus(false, true);
+                        renderAll();
+                    }
+                })
+                .catch(err => {
+                    console.error('Erro ao buscar dados:', err);
+                    setSyncStatus(false, true);
+                    renderAll();
+                });
+        }
+
         window.onload = initApp;
     </script>
 </body>
