@@ -151,9 +151,9 @@
             } catch(err) { authError.textContent=err.message; }
         }
         async function validateSession() {
-            if(!authToken){authOverlay.classList.remove('hidden');return;}
+            if(!authToken){location.replace('/login?next=%2F');return;}
             try {const r=await fetch('/api/auth',{headers:authHeaders()});const d=await r.json();if(!r.ok)throw Error(d.message);currentUser=d.user;authOverlay.classList.add('hidden');applyPermissions();syncWithAPI();}
-            catch(e){sessionStorage.removeItem('garantias_token');authToken='';authOverlay.classList.remove('hidden');}
+            catch(e){sessionStorage.removeItem('garantias_token');authToken='';location.replace('/login?next=%2F');}
         }
         function logout(){sessionStorage.removeItem('garantias_token');location.reload();}
         function applyPermissions(){
