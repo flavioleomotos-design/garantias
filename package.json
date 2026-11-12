@@ -1,15 +1,13 @@
 {
-  "build": "prisma generate",
   "name": "garantias-main",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "prisma generate",
-    "postinstall": "prisma generate",
-    "db-push": "prisma db push"
-  },
+  "build": "prisma generate",
+  "postinstall": "prisma generate",
+  "db-push": "prisma db push"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
