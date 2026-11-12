@@ -234,13 +234,13 @@
                     const val = row[col.index] !== undefined ? row[col.index] : '';
                     if (col.name === 'Status') {
                         rowHtml += `<td class="px-4 py-3">
-                            <select disabled title="${isClosed ? 'Item finalizado: edição bloqueada' : 'Clique na linha para expandir e editar'}" onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="row-editor pointer-events-none text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 ${isClosed ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-70' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}">
+                            <select title="O status pode ser alterado a qualquer momento" onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="status-editor bg-white text-gray-700 text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
                                 ${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${val === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
                             </select></td>`;
                     } else if (col.name === 'Imagem' && val) {
                         rowHtml += `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
                     } else {
-                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input disabled title="${isClosed ? 'Item finalizado: edição bloqueada' : 'Clique na linha para expandir e editar'}" onclick="event.stopPropagation()" type="text" value="${escapeHtml(val)}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="row-editor pointer-events-none w-full bg-gray-100 text-gray-500 cursor-not-allowed border-b border-transparent focus:outline-none text-sm py-1"></td>`;
+                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input disabled title="${isClosed ? 'Item finalizado: edição bloqueada' : 'Clique na linha para expandir e editar'}" onclick="event.stopPropagation()" type="text" value="${escapeHtml(val)}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="row-editor pointer-events-none w-full bg-transparent text-gray-700 cursor-not-allowed border-b border-transparent focus:outline-none text-sm py-1"></td>`;
                     }
                 });
                 rowHtml += `<td class="px-4 py-3 text-center"><button disabled title="${isClosed ? 'Item finalizado: exclusão bloqueada' : 'Expanda o item para liberar as ações'}" onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="row-editor pointer-events-none text-red-500 hover:text-red-700 p-1.5 rounded transition opacity-30 cursor-not-allowed"><i class="fa-solid fa-trash-can"></i></button></td>`;
@@ -285,10 +285,8 @@
                         ? 'Item finalizado: edição bloqueada'
                         : (isOpen ? 'Apagar item' : 'Expanda o item para liberar as ações');
                 } else {
-                    control.classList.toggle('bg-gray-100', !isOpen || isClosed);
-                    control.classList.toggle('text-gray-500', !isOpen || isClosed);
-                    control.classList.toggle('bg-white', isOpen && !isClosed && control.tagName === 'SELECT');
-                    control.classList.toggle('text-gray-700', isOpen && !isClosed);
+                    control.classList.toggle('bg-transparent', true);
+                    control.classList.toggle('text-gray-700', true);
                     control.title = isClosed
                         ? 'Item finalizado: edição bloqueada'
                         : (isOpen ? 'Campo liberado para edição' : 'Clique na linha para expandir e editar');
@@ -315,12 +313,12 @@
         }
 
         function updateStatus(rowIndex, value) {
-            if (isItemClosed(rowIndex)) {
-                alert('Este item está finalizado. Reabra-o antes de alterar o status.');
-                renderTable();
-                return;
-            }
-            state.sheets[state.currentSheet].rows[rowIndex][0] = value;
+            const sheet = state.sheets[state.currentSheet];
+            const statusIndex = sheet.columns.indexOf('Status');
+            if (statusIndex < 0 || !sheet.rows[rowIndex]) return;
+            // O status permanece editável mesmo com o acordeão recolhido ou item finalizado.
+            sheet.rows[rowIndex][statusIndex] = value;
+            renderTable();
             saveAndSync();
         }
 
