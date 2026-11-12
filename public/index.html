@@ -252,6 +252,7 @@
             sheet.rows.forEach((row, rowIndex) => {
                 const statusIndex = sheet.columns.findIndex(name => name === 'Status');
                 const isClosed = statusIndex >= 0 && String(row[statusIndex] ?? '').trim().toLowerCase() === 'finalizado';
+                const canEdit = currentUser && currentUser.accessLevel <= 2;
                 const tr = document.createElement('tr');
                 tr.className = 'item-row hover:bg-gray-50 transition border-b border-gray-100 cursor-pointer';
                 tr.dataset.closed = String(isClosed);
@@ -280,14 +281,14 @@
                                     const value = row[col.index] ?? '';
                                     const isStatus = col.name === 'Status';
                                     const locked = isClosed && !isStatus;
-                                    const editor = isStatus
+                                    const editor = !canEdit ? `<span class="text-sm text-gray-700">${escapeHtml(value) || 'Não informado'}</span>` : isStatus
                                         ? `<select onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm">${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${value === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}</select>`
                                         : `<input type="text" value="${escapeHtml(value)}" ${locked ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm ${locked ? 'opacity-60 cursor-not-allowed' : ''}" placeholder="Não informado">`;
                                     return `<label class="bg-white rounded-lg border border-indigo-100 p-3 block"><span class="block text-xs font-semibold text-gray-500 mb-1">${escapeHtml(col.name)}</span>${editor}</label>`;
                                 }).join('')}
                             </div>
                             <div class="flex justify-end mt-4">
-                                <button type="button" ${isClosed ? 'disabled' : ''} onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="text-sm px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-trash-can mr-1"></i> Excluir item</button>
+                                <button type="button" ${(!canEdit || isClosed) ? 'disabled' : ''} onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="text-sm px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-trash-can mr-1"></i> Excluir item</button>
                             </div>
                         </div></div>
                     </div>
@@ -548,7 +549,7 @@
             
             fetch(API_BASE_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
                 body: JSON.stringify({
                     sheetName: state.currentSheet,
                     columns: sheetData.columns,
@@ -610,7 +611,7 @@
                 };
                 const response = await fetch(API_BASE_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
