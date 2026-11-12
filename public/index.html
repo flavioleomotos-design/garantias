@@ -268,6 +268,7 @@
                 </td>`;
                 bodyTr.appendChild(detailTr);
             });
+            filterTable();
         }
 
         function toggleRowDetails(rowIndex, rowElement) {
@@ -361,12 +362,33 @@
             }
         }
 
+        function normalizeSearchText(value) {
+            return String(value ?? '')
+                .normalize('NFD')
+                .replace(/[\\u0300-\\u036f]/g, '')
+                .toLocaleLowerCase('pt-BR')
+                .trim();
+        }
+
         function filterTable() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
-            Array.from(rows).forEach(tr => {
-                const text = tr.textContent.toLowerCase();
-                tr.style.display = text.includes(query) ? '' : 'none';
+            const input = document.getElementById('searchInput');
+            const body = document.getElementById('tableBody');
+            const sheet = state.sheets[state.currentSheet];
+            if (!input || !body || !sheet) return;
+
+            const query = normalizeSearchText(input.value);
+            const rows = Array.from(body.children);
+
+            sheet.rows.forEach((row, rowIndex) => {
+                const rowElement = rows[rowIndex * 2];
+                const detailElement = rows[rowIndex * 2 + 1];
+                if (!rowElement || !detailElement) return;
+
+                // Pesquisa em todas as colunas, inclusive as ocultas e os campos do acordeão.
+                const searchableText = normalizeSearchText(row.map(value => String(value ?? '')).join(' '));
+                const matches = !query || searchableText.includes(query);
+                rowElement.style.display = matches ? '' : 'none';
+                detailElement.style.display = matches ? '' : 'none';
             });
         }
 
