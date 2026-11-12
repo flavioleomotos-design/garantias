@@ -34,6 +34,18 @@ body{min-height:100vh;margin:0;padding:24px;display:flex;align-items:center;just
 .submit:disabled{opacity:.65;cursor:wait}
 .error{min-height:18px;margin:10px 0 0;color:#c43f4e;font-size:12px;line-height:1.5}
 @media(max-width:480px){body{padding:16px;background:#fff}.login-card{padding:30px 22px;border:0;box-shadow:none}.brand{margin-bottom:25px}}
+/* Garante superfícies com cores sólidas, sem degradês. */
+html,body,.login-card,.brand i,.tabs,.tabs button,.field input,.submit{
+  background-image:none!important;
+}
+body{background-color:#f5f7fa!important}
+.login-card{background-color:#fff!important;box-shadow:0 8px 24px rgba(22,39,58,.06)}
+.brand i{background-color:#edf4f7!important}
+.tabs{background-color:#f2f4f7!important}
+.tabs button{background-color:transparent!important}
+.tabs button.active{background-color:#fff!important}
+.field input{background-color:#fff!important}
+.submit,.submit:hover{background-color:#176b87!important}
 </style>
 </head>
 <body>
