@@ -225,7 +225,8 @@
                 const statusIndex = cols.findIndex(col => col.name === 'Status');
                 const isClosed = statusIndex >= 0 && String(row[statusIndex] ?? '').trim().toLowerCase() === 'finalizado';
                 const tr = document.createElement('tr');
-                tr.className = 'item-row hover:bg-gray-50 transition border-b border-gray-100';
+                tr.className = 'item-row hover:bg-gray-50 transition border-b border-gray-100 cursor-pointer';
+                tr.dataset.closed = String(isClosed);
                 tr.setAttribute('aria-expanded', 'false');
                 let rowHtml = '';
                 cols.forEach(col => {
@@ -233,16 +234,16 @@
                     const val = row[col.index] !== undefined ? row[col.index] : '';
                     if (col.name === 'Status') {
                         rowHtml += `<td class="px-4 py-3">
-                            <select ${isClosed ? 'disabled title="Item finalizado: edição bloqueada"' : ''} onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 ${isClosed ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-70' : 'bg-white focus:ring-2 focus:ring-indigo-500'}">
+                            <select disabled title="${isClosed ? 'Item finalizado: edição bloqueada' : 'Clique na linha para expandir e editar'}" onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="row-editor pointer-events-none text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 ${isClosed ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-70' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}">
                                 ${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${val === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
                             </select></td>`;
                     } else if (col.name === 'Imagem' && val) {
                         rowHtml += `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
                     } else {
-                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input ${isClosed ? 'disabled title="Item finalizado: edição bloqueada"' : ''} onclick="event.stopPropagation()" type="text" value="${escapeHtml(val)}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="w-full ${isClosed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-transparent hover:border-gray-300 focus:border-indigo-500'} border-b border-transparent focus:outline-none text-sm py-1"></td>`;
+                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input disabled title="${isClosed ? 'Item finalizado: edição bloqueada' : 'Clique na linha para expandir e editar'}" onclick="event.stopPropagation()" type="text" value="${escapeHtml(val)}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="row-editor pointer-events-none w-full bg-gray-100 text-gray-500 cursor-not-allowed border-b border-transparent focus:outline-none text-sm py-1"></td>`;
                     }
                 });
-                rowHtml += `<td class="px-4 py-3 text-center"><button ${isClosed ? 'disabled title="Item finalizado: exclusão bloqueada"' : 'title="Apagar Item"'} onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="text-red-500 hover:text-red-700 p-1.5 rounded transition ${isClosed ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-trash-can"></i></button></td>`;
+                rowHtml += `<td class="px-4 py-3 text-center"><button disabled title="${isClosed ? 'Item finalizado: exclusão bloqueada' : 'Expanda o item para liberar as ações'}" onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="row-editor pointer-events-none text-red-500 hover:text-red-700 p-1.5 rounded transition opacity-30 cursor-not-allowed"><i class="fa-solid fa-trash-can"></i></button></td>`;
                 tr.innerHTML = rowHtml;
                 tr.addEventListener('click', () => toggleRowDetails(rowIndex, tr));
                 bodyTr.appendChild(tr);
@@ -273,6 +274,26 @@
             const details = document.getElementById(`details-${rowIndex}`);
             if (!details) return;
             const isOpen = details.classList.toggle('open');
+            const isClosed = rowElement.dataset.closed === 'true';
+            rowElement.querySelectorAll('.row-editor').forEach(control => {
+                control.disabled = isClosed || !isOpen;
+                control.classList.toggle('pointer-events-none', !isOpen || isClosed);
+                control.classList.toggle('cursor-not-allowed', !isOpen || isClosed);
+                if (control.tagName === 'BUTTON') {
+                    control.classList.toggle('opacity-30', !isOpen || isClosed);
+                    control.title = isClosed
+                        ? 'Item finalizado: edição bloqueada'
+                        : (isOpen ? 'Apagar item' : 'Expanda o item para liberar as ações');
+                } else {
+                    control.classList.toggle('bg-gray-100', !isOpen || isClosed);
+                    control.classList.toggle('text-gray-500', !isOpen || isClosed);
+                    control.classList.toggle('bg-white', isOpen && !isClosed && control.tagName === 'SELECT');
+                    control.classList.toggle('text-gray-700', isOpen && !isClosed);
+                    control.title = isClosed
+                        ? 'Item finalizado: edição bloqueada'
+                        : (isOpen ? 'Campo liberado para edição' : 'Clique na linha para expandir e editar');
+                }
+            });
             rowElement.setAttribute('aria-expanded', String(isOpen));
             rowElement.classList.toggle('bg-indigo-50', isOpen);
         }
