@@ -5,13 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Garantias</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 .accordion-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease,opacity .28s ease;opacity:0}
 .accordion-detail.open{grid-template-rows:1fr;opacity:1}
 .accordion-detail>div{overflow:hidden}
 .item-row{cursor:pointer}
 .item-row input,.item-row select,.item-row a,.item-row button{cursor:auto}
+
+:root{font-family:"Open Sans",sans-serif;color:#172033;background:#f4f7fb;font-synthesis:none;text-rendering:optimizeLegibility}
+*{font-family:"Open Sans",sans-serif}
+body{background:#f4f7fb!important;color:#172033!important;letter-spacing:-.01em}
+header{background:linear-gradient(115deg,#101d35 0%,#172c4c 58%,#1d4260 100%)!important;box-shadow:0 8px 28px rgba(15,30,55,.16)!important}
+header .max-w-7xl{max-width:1600px;padding-top:18px!important;padding-bottom:18px!important}
+header h1{font-size:18px!important;font-weight:700!important;letter-spacing:-.035em}
+header .fa-boxes-stacked{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.12);font-size:19px!important}
+main{max-width:1600px!important;padding:28px 28px!important;gap:22px!important}
+aside,.bg-white.rounded-xl,.bg-white.p-4{border:1px solid #e4eaf2!important;border-radius:16px!important;box-shadow:0 5px 18px rgba(21,38,66,.045)!important}
+aside{padding:18px!important}
+aside h2{font-size:13px!important;text-transform:uppercase;letter-spacing:.09em;color:#64748b!important}
+#sheetTabsContainer{gap:5px!important}
+#sheetTabsContainer button{border-radius:10px!important;font-weight:600;transition:all .18s ease}
+#sheetTabsContainer button:hover{transform:translateX(2px)}
+#sheetTabsContainer button.bg-indigo-600{background:#1d4260!important;box-shadow:0 5px 12px rgba(29,66,96,.18)}
+button{font-family:"Open Sans",sans-serif;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+button:not(:disabled):active{transform:translateY(1px)}
+button.bg-indigo-600,button.bg-indigo-700{background:#176b87!important}
+button.bg-indigo-600:hover,button.bg-indigo-700:hover{background:#12566e!important}
+button.bg-emerald-600{background:#16836d!important}
+input,select,textarea{font-family:"Open Sans",sans-serif!important;border-color:#d8e1ec!important;border-radius:10px!important;min-height:39px}
+input:focus,select:focus,textarea:focus{outline:none!important;border-color:#2685a0!important;box-shadow:0 0 0 3px rgba(38,133,160,.13)!important}
+#searchInput{min-height:42px;background:#f9fbfd}
+#dynamicTable{font-size:13px!important}
+#tableHeader{background:#f4f7fb!important;color:#52627a!important}
+#tableHeader th{padding:14px 16px!important;font-size:10px!important;font-weight:700!important;letter-spacing:.09em!important;white-space:nowrap}
+#tableBody td{padding:13px 16px!important;vertical-align:middle}
+#tableBody tr.item-row{transition:background .16s ease;border-color:#edf1f6!important}
+#tableBody tr.item-row:hover{background:#f6fafc!important}
+#tableBody tr.bg-indigo-50\/60{background:#f7fafc!important}
+#tableBody .accordion-detail>div>div{border-color:#e4eaf2!important}
+#syncStatusIndicator{letter-spacing:.01em}
+#authOverlay{background:linear-gradient(135deg,rgba(11,25,46,.94),rgba(24,57,79,.9))!important;backdrop-filter:blur(8px)}
+#authForm{border:1px solid rgba(255,255,255,.5);border-radius:20px!important;padding:34px!important;box-shadow:0 24px 70px rgba(0,0,0,.25)!important}
+#authForm h2{font-size:22px!important;color:#172c4c;letter-spacing:-.04em}
+#authForm button{background:#176b87!important;border-radius:10px!important;font-weight:700}
+.fixed.inset-0.z-50>div{border:1px solid #e4eaf2;border-radius:18px!important;box-shadow:0 24px 70px rgba(15,30,55,.2)!important}
+@media(max-width:767px){main{padding:16px!important;gap:14px!important}header .max-w-7xl{padding:14px 16px!important}header h1{font-size:15px!important}aside{position:static!important}#sheetTabsContainer{max-height:180px!important}#syncAdminControls{flex-wrap:wrap;justify-content:center}}
+
 </style>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
