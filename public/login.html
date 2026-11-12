@@ -3,135 +3,95 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#10243a">
+<meta name="theme-color" content="#f5f7fa">
 <title>Login | Garantias</title>
-<script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <style>
-:root{font-family:"Open Sans",sans-serif;color:#172033;background:#f3f6fa;font-synthesis:none;text-rendering:optimizeLegibility}
-*{font-family:"Open Sans",sans-serif;box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% 10%,rgba(43,130,157,.09),transparent 30%),#f3f6fa;color:#172033}
-.login-shell{width:min(100%,1080px);min-height:650px;display:grid;grid-template-columns:1fr 1fr;background:#fff;border:1px solid #e4eaf1;border-radius:26px;overflow:hidden;box-shadow:0 28px 80px rgba(17,39,64,.13)}
-.brand-panel{position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:52px 48px;color:#fff;background:linear-gradient(145deg,#10243a 0%,#153b55 56%,#176b87 100%);overflow:hidden}
-.brand-panel:before,.brand-panel:after{content:"";position:absolute;border:1px solid rgba(255,255,255,.1);border-radius:50%;pointer-events:none}
-.brand-panel:before{width:440px;height:440px;right:-180px;top:-130px}
-.brand-panel:after{width:340px;height:340px;right:-110px;top:-80px}
-.brand-content,.brand-footer,.brand-logo{position:relative;z-index:1}
-.brand-logo{display:flex;align-items:center;gap:13px;font-size:19px;font-weight:800;letter-spacing:-.04em}
-.logo-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);font-size:18px}
-.brand-content{max-width:420px;margin:auto 0}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid rgba(255,255,255,.2);border-radius:99px;background:rgba(255,255,255,.08);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d5eaf1}
-.brand-content h1{margin:22px 0 16px;font-size:clamp(30px,4vw,43px);line-height:1.16;letter-spacing:-.055em;font-weight:800}
-.brand-content>p{margin:0;color:#c6d8e3;font-size:14px;line-height:1.85}
-.feature-list{display:grid;gap:16px;margin-top:34px}
-.feature{display:flex;align-items:center;gap:13px;color:#e5f0f5;font-size:13px;font-weight:600}
-.feature i{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.11);color:#8ed4df}
-.brand-footer{font-size:11px;color:#a9c1cf}
-.form-panel{display:flex;align-items:center;justify-content:center;padding:48px 56px}
-.form-inner{width:100%;max-width:370px}
-.mobile-logo{display:none}
-.form-heading{margin-bottom:30px}
-.form-heading .overline{color:#18728c;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
-.form-heading h2{margin:9px 0 7px;color:#172b40;font-size:27px;line-height:1.25;font-weight:800;letter-spacing:-.05em}
-.form-heading p{margin:0;color:#718096;font-size:13px;line-height:1.6}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;margin-bottom:25px;border:1px solid #e8edf3;border-radius:12px;background:#f5f7fa}
-.tabs button{height:39px;border:0;border-radius:8px;background:transparent;color:#718096;font-size:12px;font-weight:700;cursor:pointer;transition:.2s}
-.tabs button.active{background:#fff;color:#176b87;box-shadow:0 2px 8px rgba(20,42,65,.09)}
-.field{display:block;margin-bottom:17px;color:#344256;font-size:12px;font-weight:700}
-.field-wrap{position:relative;margin-top:8px}
-.field-wrap>i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#91a0b2;font-size:13px}
-.field input{width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #dce4ed;border-radius:11px;background:#fff;color:#172033;font-size:13px;font-weight:500;outline:none;transition:border-color .2s,box-shadow .2s}
-.field input::placeholder{color:#a4afbd}
-.field input:focus{border-color:#23819a;box-shadow:0 0 0 4px rgba(35,129,154,.11)}
-.hint{min-height:34px;margin:2px 0 12px;color:#8390a0;font-size:11px;line-height:1.6}
-.submit-btn{width:100%;height:49px;display:flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:11px;background:linear-gradient(100deg,#176b87,#21849a);color:#fff;font-size:13px;font-weight:800;box-shadow:0 8px 18px rgba(23,107,135,.2);cursor:pointer;transition:transform .18s,box-shadow .18s,filter .18s}
-.submit-btn:hover{transform:translateY(-1px);filter:brightness(1.04);box-shadow:0 11px 22px rgba(23,107,135,.25)}
-.submit-btn:active{transform:translateY(0)}
-.error{min-height:20px;margin:12px 0 0;color:#c43f4e;font-size:12px;line-height:1.5}
-.security-note{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:24px;color:#9aa5b3;font-size:10px}
-.security-note i{color:#2a9a82}
-@media(max-width:760px){body{padding:18px}.login-shell{max-width:480px;min-height:0;grid-template-columns:1fr;border-radius:22px}.brand-panel{display:none}.form-panel{padding:38px 28px}.mobile-logo{display:flex;align-items:center;gap:10px;margin-bottom:34px;color:#18344b;font-size:16px;font-weight:800}.mobile-logo .logo-mark{background:#e8f2f5;border-color:#d7e8ed;color:#176b87}.form-heading h2{font-size:25px}}
-@media(max-width:380px){body{padding:10px}.form-panel{padding:28px 20px}.mobile-logo{margin-bottom:26px}}
+*{box-sizing:border-box}
+:root{font-family:"Open Sans",sans-serif;color:#1c2938;background:#f5f7fa;font-synthesis:none;text-rendering:optimizeLegibility}
+body{min-height:100vh;margin:0;padding:24px;display:flex;align-items:center;justify-content:center;background:#f5f7fa}
+.login-card{width:100%;max-width:410px;padding:38px 36px 30px;background:#fff;border:1px solid #e7ebf0;border-radius:16px;box-shadow:0 12px 36px rgba(22,39,58,.07)}
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;color:#173b53;font-size:20px;font-weight:800;letter-spacing:-.6px}
+.brand i{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#edf4f7;color:#176b87;font-size:17px}
+.heading{text-align:center;margin-bottom:25px}
+.heading h1{margin:0 0 7px;font-size:22px;line-height:1.35;font-weight:700;letter-spacing:-.6px;color:#1d2d3d}
+.heading p{margin:0;color:#7b8794;font-size:13px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:24px;border-radius:9px;background:#f2f4f7}
+.tabs button{height:38px;border:0;border-radius:7px;background:transparent;color:#718096;font:600 12px "Open Sans",sans-serif;cursor:pointer}
+.tabs button.active{background:#fff;color:#176b87;box-shadow:0 1px 4px rgba(20,35,50,.1)}
+.field{display:block;margin-bottom:17px;color:#39485a;font-size:12px;font-weight:600}
+.field-wrap{position:relative;display:block;margin-top:7px}
+.field-wrap i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#98a4b1;font-size:13px}
+.field input{width:100%;height:45px;padding:0 13px 0 38px;border:1px solid #dce2e9;border-radius:8px;background:#fff;color:#243244;font:400 13px "Open Sans",sans-serif;outline:none;transition:border-color .18s,box-shadow .18s}
+.field input::placeholder{color:#a4aeb9}
+.field input:focus{border-color:#25809a;box-shadow:0 0 0 3px rgba(37,128,154,.1)}
+.hint{margin:0 0 15px;color:#8793a0;font-size:11px;line-height:1.5}
+.submit{width:100%;height:45px;border:0;border-radius:8px;background:#176b87;color:#fff;font:700 13px "Open Sans",sans-serif;cursor:pointer;transition:background .18s}
+.submit:hover{background:#125970}
+.submit:disabled{opacity:.65;cursor:wait}
+.error{min-height:18px;margin:10px 0 0;color:#c43f4e;font-size:12px;line-height:1.5}
+@media(max-width:480px){body{padding:16px;background:#fff}.login-card{padding:30px 22px;border:0;box-shadow:none}.brand{margin-bottom:25px}}
 </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
-<main class="login-shell">
-<section class="brand-panel" aria-label="Apresentação do sistema">
-<div class="brand-logo"><span class="logo-mark"><i class="fa-solid fa-shield-halved"></i></span><span>GARANTIAS</span></div>
-<div class="brand-content">
-<span class="eyebrow"><i class="fa-solid fa-circle-check"></i> Gestão inteligente</span>
-<h1>Controle suas garantias com mais clareza e segurança.</h1>
-<p>Uma plataforma centralizada para acompanhar informações, organizar processos e manter tudo sob controle.</p>
-<div class="feature-list">
-<div class="feature"><i class="fa-solid fa-layer-group"></i><span>Informações organizadas em um só lugar</span></div>
-<div class="feature"><i class="fa-solid fa-arrows-rotate"></i><span>Acompanhamento e atualização dos registros</span></div>
-<div class="feature"><i class="fa-solid fa-lock"></i><span>Acesso protegido por usuário e senha</span></div>
-</div>
-</div>
-<div class="brand-footer">GESTÃO DE GARANTIAS · ACESSO SEGURO</div>
-</section>
-<section class="form-panel">
-<div class="form-inner">
-<div class="mobile-logo"><span class="logo-mark"><i class="fa-solid fa-shield-halved"></i></span><span>GARANTIAS</span></div>
-<div class="form-heading">
-<span class="overline">Bem-vindo</span>
-<h2>Acesse sua conta</h2>
-<p>Entre com suas credenciais para continuar.</p>
-</div>
-<div class="tabs" role="tablist" aria-label="Tipo de acesso">
-<button type="button" id="lt" class="active" role="tab" aria-selected="true">Entrar</button>
-<button type="button" id="rt" role="tab" aria-selected="false">Criar conta</button>
-</div>
-<form id="f">
-<label class="field">Usuário
-<span class="field-wrap"><i class="fa-regular fa-user"></i><input id="u" required minlength="3" maxlength="32" autocomplete="username" placeholder="Digite seu usuário"></span>
-</label>
-<label class="field">Senha
-<span class="field-wrap"><i class="fa-solid fa-lock"></i><input id="p" type="password" required minlength="8" autocomplete="current-password" placeholder="Mínimo de 8 caracteres"></span>
-</label>
-<p id="hint" class="hint">Entre com seu usuário e senha.</p>
-<button id="submit" class="submit-btn" type="submit"><span>Entrar</span><i class="fa-solid fa-arrow-right"></i></button>
-<p id="err" class="error" role="alert" aria-live="polite"></p>
-</form>
-<div class="security-note"><i class="fa-solid fa-shield-check"></i><span>Seus dados são protegidos por autenticação segura</span></div>
-</div>
-</section>
+<body>
+<main class="login-card">
+  <div class="brand"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>GARANTIAS</span></div>
+  <header class="heading">
+    <h1 id="heading-title">Acesse sua conta</h1>
+    <p id="heading-subtitle">Entre com seu usuário e senha.</p>
+  </header>
+  <div class="tabs" role="tablist" aria-label="Acesso">
+    <button type="button" id="lt" class="active" role="tab" aria-selected="true">Entrar</button>
+    <button type="button" id="rt" role="tab" aria-selected="false">Criar conta</button>
+  </div>
+  <form id="f">
+    <label class="field">Usuário
+      <span class="field-wrap"><i class="fa-regular fa-user" aria-hidden="true"></i><input id="u" required minlength="3" maxlength="32" autocomplete="username" placeholder="Digite seu usuário"></span>
+    </label>
+    <label class="field">Senha
+      <span class="field-wrap"><i class="fa-solid fa-lock" aria-hidden="true"></i><input id="p" type="password" required minlength="8" autocomplete="current-password" placeholder="Mínimo de 8 caracteres"></span>
+    </label>
+    <p id="hint" class="hint">Use seus dados cadastrados para entrar.</p>
+    <button id="submit" class="submit" type="submit">Entrar</button>
+    <p id="err" class="error" role="alert" aria-live="polite"></p>
+  </form>
 </main>
 <script>
 let mode='login';
-const $=x=>document.getElementById(x);
+const $=id=>document.getElementById(id);
 function set(m){
- mode=m;
- $('lt').className=m==='login'?'active':'';
- $('rt').className=m==='register'?'active':'';
- $('lt').setAttribute('aria-selected',String(m==='login'));
- $('rt').setAttribute('aria-selected',String(m==='register'));
- $('submit').innerHTML=m==='login'?'<span>Entrar</span><i class="fa-solid fa-arrow-right"></i>':'<span>Criar conta</span><i class="fa-solid fa-user-plus"></i>';
- $('hint').textContent=m==='login'?'Entre com seu usuário e senha.':'Novas contas recebem nível 3 (somente visualização).';
- $('err').textContent='';
- $('p').setAttribute('autocomplete',m==='login'?'current-password':'new-password');
+  mode=m;
+  const login=m==='login';
+  $('lt').className=login?'active':'';
+  $('rt').className=login?'':'active';
+  $('lt').setAttribute('aria-selected',String(login));
+  $('rt').setAttribute('aria-selected',String(!login));
+  $('heading-title').textContent=login?'Acesse sua conta':'Crie sua conta';
+  $('heading-subtitle').textContent=login?'Entre com seu usuário e senha.':'Preencha os campos para criar seu acesso.';
+  $('hint').textContent=login?'Use seus dados cadastrados para entrar.':'Novas contas recebem nível 3 (somente visualização).';
+  $('submit').textContent=login?'Entrar':'Criar conta';
+  $('p').setAttribute('autocomplete',login?'current-password':'new-password');
+  $('err').textContent='';
 }
 $('lt').onclick=()=>set('login');
 $('rt').onclick=()=>set('register');
 $('f').onsubmit=async e=>{
- e.preventDefault();
- $('err').textContent='';
- if($('p').value.length<8){$('err').textContent='A senha deve ter pelo menos 8 caracteres.';return;}
- const btn=$('submit');
- btn.disabled=true;
- btn.style.opacity='.7';
- try{
-  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:mode,username:$('u').value,password:$('p').value})});
-  const d=await r.json();
-  if(!r.ok)throw Error(d.message);
-  sessionStorage.setItem('garantias_token',d.token);
-  const n=new URLSearchParams(location.search).get('next')||'/';
-  location.replace(n.startsWith('/')&&!n.startsWith('//')?n:'/');
- }catch(x){$('err').textContent=x.message||'Não foi possível autenticar. Tente novamente.';}
- finally{btn.disabled=false;btn.style.opacity='1';}
+  e.preventDefault();
+  $('err').textContent='';
+  if($('p').value.length<8){$('err').textContent='A senha deve ter pelo menos 8 caracteres.';return;}
+  const btn=$('submit');btn.disabled=true;
+  try{
+    const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:mode,username:$('u').value,password:$('p').value})});
+    const d=await r.json();
+    if(!r.ok)throw Error(d.message);
+    sessionStorage.setItem('garantias_token',d.token);
+    const n=new URLSearchParams(location.search).get('next')||'/';
+    location.replace(n.startsWith('/')&&!n.startsWith('//')?n:'/');
+  }catch(x){$('err').textContent=x.message||'Não foi possível autenticar. Tente novamente.';}
+  finally{btn.disabled=false;}
 };
 </script>
 </body>
