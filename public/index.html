@@ -178,7 +178,7 @@
         function renderTabs() {
             const container = document.getElementById('sheetTabsContainer');
             container.innerHTML = '';
-            Object.keys(state.sheets).forEach(sheetName => {
+            Object.keys(state.sheets).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' })).forEach(sheetName => {
                 const isActive = sheetName === state.currentSheet;
                 const group = document.createElement('div');
                 group.className = 'inline-flex items-center rounded-lg overflow-hidden border border-gray-200';
@@ -476,13 +476,64 @@
             });
         }
 
+        // Cria duas abas de demonstração uma única vez, sem sobrescrever dados existentes.
+        async function ensureTestSheets() {
+            const demoTabs = {
+                'Teste 01 - Peças': [
+                    ['Pendente', '7890000000011', 'Bateria 12V 5Ah', 'Fornecedor Teste A', 'Não mantém carga', '2', '', 'Produto fictício para teste', 'Lote TESTE-001'],
+                    ['Pendente', '7890000000012', 'Retificador de voltagem', 'Fornecedor Teste A', 'Não regula a tensão', '3', '', 'Produto fictício para teste', 'Lote TESTE-002'],
+                    ['Pendente', '7890000000013', 'Estator completo', 'Fornecedor Teste B', 'Bobina com curto', '1', '', 'Produto fictício para teste', 'Lote TESTE-003'],
+                    ['Pendente', '7890000000014', 'Motor de partida', 'Fornecedor Teste B', 'Motor não gira', '2', '', 'Produto fictício para teste', 'Lote TESTE-004'],
+                    ['Pendente', '7890000000015', 'CDI', 'Fornecedor Teste C', 'Falha na ignição', '4', '', 'Produto fictício para teste', 'Lote TESTE-005'],
+                    ['Pendente', '7890000000016', 'Bobina de ignição', 'Fornecedor Teste C', 'Sem centelha', '2', '', 'Produto fictício para teste', 'Lote TESTE-006'],
+                    ['Pendente', '7890000000017', 'Regulador de voltagem', 'Fornecedor Teste A', 'Sobrecarga no sistema', '3', '', 'Produto fictício para teste', 'Lote TESTE-007'],
+                    ['Pendente', '7890000000018', 'Bomba de combustível', 'Fornecedor Teste D', 'Baixa pressão', '1', '', 'Produto fictício para teste', 'Lote TESTE-008'],
+                    ['Pendente', '7890000000019', 'Sensor de velocidade', 'Fornecedor Teste D', 'Leitura intermitente', '2', '', 'Produto fictício para teste', 'Lote TESTE-009'],
+                    ['Pendente', '7890000000020', 'Painel de instrumentos', 'Fornecedor Teste B', 'Display apagado', '1', '', 'Produto fictício para teste', 'Lote TESTE-010']
+                ],
+                'Teste 02 - Elétrica': [
+                    ['Pendente', '7890000000021', 'Farol dianteiro', 'Fornecedor Teste E', 'Lâmpada não acende', '2', '', 'Produto fictício para teste', 'Lote TESTE-011'],
+                    ['Pendente', '7890000000022', 'Lanterna traseira', 'Fornecedor Teste E', 'Trinca na lente', '3', '', 'Produto fictício para teste', 'Lote TESTE-012'],
+                    ['Pendente', '7890000000023', 'Pisca dianteiro', 'Fornecedor Teste F', 'Conector danificado', '4', '', 'Produto fictício para teste', 'Lote TESTE-013'],
+                    ['Pendente', '7890000000024', 'Chicote elétrico', 'Fornecedor Teste F', 'Fiação interrompida', '1', '', 'Produto fictício para teste', 'Lote TESTE-014'],
+                    ['Pendente', '7890000000025', 'Interruptor de partida', 'Fornecedor Teste G', 'Botão sem contato', '2', '', 'Produto fictício para teste', 'Lote TESTE-015'],
+                    ['Pendente', '7890000000026', 'Manete de freio', 'Fornecedor Teste G', 'Peça empenada', '3', '', 'Produto fictício para teste', 'Lote TESTE-016'],
+                    ['Pendente', '7890000000027', 'Buzina 12V', 'Fornecedor Teste H', 'Som intermitente', '2', '', 'Produto fictício para teste', 'Lote TESTE-017'],
+                    ['Pendente', '7890000000028', 'Retrovisor', 'Fornecedor Teste H', 'Rosca danificada', '4', '', 'Produto fictício para teste', 'Lote TESTE-018'],
+                    ['Pendente', '7890000000029', 'Cabo do acelerador', 'Fornecedor Teste I', 'Cabo travando', '2', '', 'Produto fictício para teste', 'Lote TESTE-019'],
+                    ['Pendente', '7890000000030', 'Cabo de embreagem', 'Fornecedor Teste I', 'Cabo desfiado', '3', '', 'Produto fictício para teste', 'Lote TESTE-020']
+                ]
+            };
+            for (const [sheetName, rows] of Object.entries(demoTabs)) {
+                if (state.sheets[sheetName]) continue;
+                const payload = {
+                    sheetName,
+                    columns: [...DEFAULT_COLUMNS],
+                    hiddenColumns: [],
+                    customColumns: [],
+                    rows
+                };
+                const response = await fetch(API_BASE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') {
+                    throw new Error(result.message || 'Não foi possível criar as abas de teste.');
+                }
+                state.sheets[sheetName] = payload;
+            }
+        }
+
         function syncWithAPI() {
             setSyncStatus(true);
             fetch(API_BASE_URL)
                 .then(res => res.json())
-                .then(res => {
+                .then(async res => {
                     if (res.status === 'success' && res.sheets) {
                         state.sheets = res.sheets;
+                        await ensureTestSheets();
                         // Define a aba inicial se disponível
                         if (!state.sheets[state.currentSheet]) {
                             state.currentSheet = Object.keys(state.sheets)[0] || 'Garantias';
