@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Garantias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-boxes-stacked text-2xl"></i>
+                <h1 class="text-xl font-bold">Gestão de Garantias & Produtores</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="syncWithAPI()" class="bg-indigo-600 hover:bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-indigo-500">
+                    <i class="fa-solid fa-rotate"></i> Sincronizar Agora
+                </button>
+                <div id="syncStatusIndicator" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm">
+                    <i class="fa-solid fa-database"></i> Conectado ao Banco
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 flex flex-col gap-6">
+        
+        <!-- Abas & Ações de Abas -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4">
+            <div id="sheetTabsContainer" class="flex flex-wrap items-center gap-2">
+                <!-- Abas geradas dinamicamente -->
+            </div>
+            <button onclick="openNewSheetModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-plus"></i> Criar Nova Aba
+            </button>
+        </div>
+
+        <!-- Ferramentas da Tabela -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <button onclick="openAddItemModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> Adicionar Novo Item
+                </button>
+                <button onclick="openNewColumnModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-3 py-2 rounded-lg font-medium transition flex items-center gap-2 border border-gray-300">
+                    <i class="fa-solid fa-columns"></i> Criar Coluna
+                </button>
+                <button onclick="openManageColumnsModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-3 py-2 rounded-lg font-medium transition flex items-center gap-2 border border-gray-300">
+                    <i class="fa-solid fa-eye-slash"></i> Ocultar/Apagar Colunas
+                </button>
+            </div>
+            <div class="w-full md:w-72 relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="searchInput" oninput="filterTable()" placeholder="Pesquisar itens..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+        </div>
+
+        <!-- Tabela Principal -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
+            <div class="overflow-x-auto flex-1">
+                <table id="dynamicTable" class="w-full text-left border-collapse text-sm">
+                    <thead id="tableHeader" class="bg-gray-100 text-gray-700 uppercase text-xs tracking-wider border-b border-gray-200">
+                        <!-- Cabeçalho dinâmico -->
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-200 bg-white">
+                        <!-- Linhas geradas dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Nova Aba -->
+    <div id="newSheetModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4">
+            <h2 class="text-lg font-bold text-gray-900">Criar Nova Aba</h2>
+            <input type="text" id="newSheetNameInput" placeholder="Nome da Aba (ex: Setor Norte)" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeNewSheetModal()" class="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg">Cancelar</button>
+                <button onclick="createSheetSubmit()" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Novo Item -->
+    <div id="addItemModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-lg font-bold text-gray-900">Adicionar Novo Item</h2>
+            <div id="addItemFormFields" class="flex flex-col gap-3">
+                <!-- Gerado dinamicamente -->
+            </div>
+            <div class="flex justify-end gap-3 mt-4">
+                <button onclick="closeAddItemModal()" class="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg">Cancelar</button>
+                <button onclick="saveNewItem()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nova Coluna -->
+    <div id="newColumnModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4">
+            <h2 class="text-lg font-bold text-gray-900">Criar Nova Coluna</h2>
+            <input type="text" id="newColumnNameInput" placeholder="Nome da Coluna Personalizada" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeNewColumnModal()" class="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg">Cancelar</button>
+                <button onclick="createColumnSubmit()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ocultar/Apagar Colunas -->
+    <div id="manageColumnsModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+            <h2 class="text-lg font-bold text-gray-900">Gerenciar Colunas</h2>
+            <div id="columnsListContainer" class="flex flex-col gap-2">
+                <!-- Listagem dinâmica -->
+            </div>
+            <div class="flex justify-end gap-3 mt-4">
+                <button onclick="closeManageColumnsModal()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_COLUMNS = ['Status', 'Cód. Barras', 'Descrição', 'Fornecedor', 'Defeito', 'Quantidade', 'Imagem', 'Observação', 'Anotações'];
+        const API_BASE_URL = '/api/sheets'; // Aponta para a API na Vercel
+
+        let state = {
+            sheets: {
+                'Garantias': {
+                    columns: [...DEFAULT_COLUMNS],
+                    hiddenColumns: [],
+                    customColumns: [],
+                    rows: []
+                }
+            },
+            currentSheet: 'Garantias'
+        };
+
+        const statusOptions = ['Pendente', 'Saída', 'Separado', 'Enviado', 'Finalizado'];
+
+        function initApp() {
+            syncWithAPI();
+        }
+
+        function renderAll() {
+            renderTabs();
+            renderTable();
+        }
+
+        function setSyncStatus(isSyncing, isError = false) {
+            const ind = document.getElementById('syncStatusIndicator');
+            if (isError) {
+                ind.className = "text-xs bg-red-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
+                ind.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Erro de Conexão`;
+            } else if (isSyncing) {
+                ind.className = "text-xs bg-amber-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
+                ind.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...`;
+            } else {
+                ind.className = "text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
+                ind.innerHTML = `<i class="fa-solid fa-database"></i> Conectado ao Banco`;
+            }
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('sheetTabsContainer');
+            container.innerHTML = '';
+            Object.keys(state.sheets).forEach(sheetName => {
+                const isActive = sheetName === state.currentSheet;
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-lg text-sm font-medium transition ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`;
+                btn.textContent = sheetName;
+                btn.onclick = () => { state.currentSheet = sheetName; renderTable(); renderTabs(); };
+                container.appendChild(btn);
+            });
+        }
+
+        function getActiveColumns() {
+            const s = state.sheets[state.currentSheet];
+            return s.columns.map((col, index) => ({ name: col, index, hidden: s.hiddenColumns.includes(col) }));
+        }
+
+        function renderTable() {
+            const sheet = state.sheets[state.currentSheet];
+            if (!sheet) return;
+
+            const headerTr = document.getElementById('tableHeader');
+            const bodyTr = document.getElementById('tableBody');
+            headerTr.innerHTML = '';
+            bodyTr.innerHTML = '';
+
+            const cols = getActiveColumns();
+            const visibleCols = cols.filter(c => !c.hidden);
+
+            // Cabeçalho
+            let headerHtml = '';
+            visibleCols.forEach(col => {
+                headerHtml += `<th class="px-4 py-3 font-semibold">${col.name}</th>`;
+            });
+            headerHtml += `<th class="px-4 py-3 text-center font-semibold">Ações</th>`;
+            headerTr.innerHTML = headerHtml;
+
+            // Linhas
+            sheet.rows.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition border-b border-gray-100";
+                
+                let rowHtml = '';
+                cols.forEach(col => {
+                    if (col.hidden) return;
+                    const val = row[col.index] !== undefined ? row[col.index] : '';
+                    
+                    if (col.name === 'Status') {
+                        rowHtml += `<td class="px-4 py-3">
+                            <select onchange="updateStatus(${rowIndex}, this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                                ${statusOptions.map(opt => `<option value="${opt}" ${val === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>
+                        </td>`;
+                    } else if (col.name === 'Imagem' && val) {
+                        rowHtml += `<td class="px-4 py-3"><a href="${val}" target="_blank" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
+                    } else {
+                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input type="text" value="${val}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-indigo-500 focus:outline-none text-sm py-1"></td>`;
+                    }
+                });
+
+                rowHtml += `<td class="px-4 py-3 text-center">
+                    <button onclick="deleteRow(${rowIndex})" class="text-red-500 hover:text-red-700 p-1.5 rounded transition" title="Apagar Item">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </td>`;
+                tr.innerHTML = rowHtml;
+                bodyTr.appendChild(tr);
+            });
+        }
+
+        function updateCell(rowIndex, colIndex, value) {
+            state.sheets[state.currentSheet].rows[rowIndex][colIndex] = value;
+            saveAndSync();
+        }
+
+        function updateStatus(rowIndex, value) {
+            state.sheets[state.currentSheet].rows[rowIndex][0] = value;
+            saveAndSync();
+        }
+
+        function deleteRow(rowIndex) {
+            if (confirm('Deseja realmente apagar este item?')) {
+                state.sheets[state.currentSheet].rows.splice(rowIndex, 1);
+                renderTable();
+                saveAndSync();
+            }
+        }
+
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            Array.from(rows).forEach(tr => {
+                const text = tr.textContent.toLowerCase();
+                tr.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        // Modais de Criação
+        function openNewSheetModal() { document.getElementById('newSheetModal').classList.remove('hidden'); }
+        function closeNewSheetModal() { document.getElementById('newSheetModal').classList.add('hidden'); }
+        function createSheetSubmit() {
+            const name = document.getElementById('newSheetNameInput').value.trim();
+            if (!name || state.sheets[name]) {
+                alert('Nome inválido ou aba já existente.');
+                return;
+            }
+            state.sheets[name] = { columns: [...DEFAULT_COLUMNS], hiddenColumns: [], customColumns: [], rows: [] };
+            state.currentSheet = name;
+            closeNewSheetModal();
+            document.getElementById('newSheetNameInput').value = '';
+            renderAll();
+            saveAndSync();
+        }
+
+        function openAddItemModal() {
+            const container = document.getElementById('addItemFormFields');
+            container.innerHTML = '';
+            const cols = state.sheets[state.currentSheet].columns;
+            cols.forEach(col => {
+                div = document.createElement('div');
+                div.className = 'flex flex-col gap-1';
+                if (col === 'Status') {
+                    div.innerHTML = `<label class="text-xs font-semibold text-gray-600">${col}</label>
+                        <select id="add_${col}" class="border border-gray-300 rounded-lg p-2 text-sm">
+                            ${statusOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                        </select>`;
+                } else {
+                    div.innerHTML = `<label class="text-xs font-semibold text-gray-600">${col}</label>
+                        <input type="text" id="add_${col}" class="border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">`;
+                }
+                container.appendChild(div);
+            });
+            document.getElementById('addItemModal').classList.remove('hidden');
+        }
+        function closeAddItemModal() { document.getElementById('addItemModal').classList.add('hidden'); }
+        function saveNewItem() {
+            const cols = state.sheets[state.currentSheet].columns;
+            const newRow = cols.map(col => {
+                const el = document.getElementById(`add_${col}`);
+                return el ? el.value : '';
+            });
+            state.sheets[state.currentSheet].rows.push(newRow);
+            closeAddItemModal();
+            renderTable();
+            saveAndSync();
+        }
+
+        function openNewColumnModal() { document.getElementById('newColumnModal').classList.remove('hidden'); }
+        function closeNewColumnModal() { document.getElementById('newColumnModal').classList.add('hidden'); }
+        function createColumnSubmit() {
+            const name = document.getElementById('newColumnNameInput').value.trim();
+            const sheet = state.sheets[state.currentSheet];
+            if (!name || sheet.columns.includes(name)) {
+                alert('Nome de coluna inválido ou já existente.');
+                return;
+            }
+            sheet.columns.push(name);
+            sheet.customColumns.push(name);
+            sheet.rows.forEach(r => r.push(''));
+            closeNewColumnModal();
+            document.getElementById('newColumnNameInput').value = '';
+            renderTable();
+            saveAndSync();
+        }
+
+        function openManageColumnsModal() {
+            const container = document.getElementById('columnsListContainer');
+            container.innerHTML = '';
+            const sheet = state.sheets[state.currentSheet];
+            sheet.columns.forEach(col => {
+                const isHidden = sheet.hiddenColumns.includes(col);
+                const isCustom = sheet.customColumns.includes(col);
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200";
+                div.innerHTML = `
+                    <span class="text-sm font-medium text-gray-700">${col}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleHideColumn('${col}')" class="text-xs px-2.5 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">${isHidden ? 'Mostrar' : 'Ocultar'}</button>
+                        ${isCustom ? `<button onclick="deleteColumn('${col}')" class="text-xs px-2.5 py-1 rounded bg-red-100 hover:bg-red-200 text-red-600">Apagar</button>` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            document.getElementById('manageColumnsModal').classList.remove('hidden');
+        }
+        function closeManageColumnsModal() { document.getElementById('manageColumnsModal').classList.add('hidden'); }
+
+        function toggleHideColumn(col) {
+            const sheet = state.sheets[state.currentSheet];
+            if (sheet.hiddenColumns.includes(col)) {
+                sheet.hiddenColumns = sheet.hiddenColumns.filter(c => c !== col);
+            } else {
+                sheet.hiddenColumns.push(col);
+            }
+            openManageColumnsModal();
+            renderTable();
+            saveAndSync(); // Salva a configuração de colunas ocultas no banco
+        }
+
+        function deleteColumn(col) {
+            if (!confirm(`Deseja apagar a coluna "${col}"?`)) return;
+            const sheet = state.sheets[state.currentSheet];
+            const index = sheet.columns.indexOf(col);
+            if (index > -1) {
+                sheet.columns.splice(index, 1);
+                sheet.customColumns = sheet.customColumns.filter(c => c !== col);
+                sheet.hiddenColumns = sheet.hiddenColumns.filter(c => c !== col);
+                sheet.rows.forEach(r => r.splice(index, 1));
+            }
+            openManageColumnsModal();
+            renderTable();
+            saveAndSync();
+        }
+
+        // Comunicação com a API Prisma (Vercel Serverless)
+        function saveAndSync() {
+            setSyncStatus(true);
+            const sheetData = state.sheets[state.currentSheet];
+            
+            fetch(API_BASE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sheetName: state.currentSheet,
+                    columns: sheetData.columns,
+                    hiddenColumns: sheetData.hiddenColumns,
+                    customColumns: sheetData.customColumns,
+                    rows: sheetData.rows
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    setSyncStatus(false);
+                } else {
+                    setSyncStatus(false, true);
+                }
+            })
+            .catch(err => {
+                console.error('Erro ao salvar:', err);
+                setSyncStatus(false, true);
+            });
+        }
+
+        function syncWithAPI() {
+            setSyncStatus(true);
+            fetch(API_BASE_URL)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success' && res.sheets) {
+                        state.sheets = res.sheets;
+                        // Define a aba inicial se disponível
+                        if (!state.sheets[state.currentSheet]) {
+                            state.currentSheet = Object.keys(state.sheets)[0] || 'Garantias';
+                        }
+                        renderAll();
+                        setSyncStatus(false);
+                    } else {
+                        setSyncStatus(false, true);
+                        renderAll();
+                    }
+                })
+                .catch(err => {
+                    console.error('Erro ao buscar dados:', err);
+                    setSyncStatus(false, true);
+                    renderAll();
+                });
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
