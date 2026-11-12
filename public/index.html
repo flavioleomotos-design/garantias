@@ -310,7 +310,8 @@
                 </td>`;
                 bodyTr.appendChild(detailTr);
             });
-            filterTable();
+            // Não chamar filterTable aqui: quando a busca está vazia, filterTable
+            // delega a renderização para renderTable. Isso criava recursão infinita.
         }
 
         function toggleRowDetails(rowIndex, rowElement) {
