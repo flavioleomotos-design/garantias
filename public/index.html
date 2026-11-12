@@ -222,6 +222,8 @@
                 '<th class="px-4 py-3 text-center font-semibold">Ações</th>';
 
             sheet.rows.forEach((row, rowIndex) => {
+                const statusIndex = cols.findIndex(col => col.name === 'Status');
+                const isClosed = statusIndex >= 0 && String(row[statusIndex] ?? '').trim().toLowerCase() === 'finalizado';
                 const tr = document.createElement('tr');
                 tr.className = 'item-row hover:bg-gray-50 transition border-b border-gray-100';
                 tr.setAttribute('aria-expanded', 'false');
@@ -231,16 +233,16 @@
                     const val = row[col.index] !== undefined ? row[col.index] : '';
                     if (col.name === 'Status') {
                         rowHtml += `<td class="px-4 py-3">
-                            <select onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                            <select ${isClosed ? 'disabled title="Item finalizado: edição bloqueada"' : ''} onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 ${isClosed ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-70' : 'bg-white focus:ring-2 focus:ring-indigo-500'}">
                                 ${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${val === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
                             </select></td>`;
                     } else if (col.name === 'Imagem' && val) {
                         rowHtml += `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
                     } else {
-                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input onclick="event.stopPropagation()" type="text" value="${escapeHtml(val)}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-indigo-500 focus:outline-none text-sm py-1"></td>`;
+                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input ${isClosed ? 'disabled title="Item finalizado: edição bloqueada"' : ''} onclick="event.stopPropagation()" type="text" value="${escapeHtml(val)}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="w-full ${isClosed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-transparent hover:border-gray-300 focus:border-indigo-500'} border-b border-transparent focus:outline-none text-sm py-1"></td>`;
                     }
                 });
-                rowHtml += `<td class="px-4 py-3 text-center"><button onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="text-red-500 hover:text-red-700 p-1.5 rounded transition" title="Apagar Item"><i class="fa-solid fa-trash-can"></i></button></td>`;
+                rowHtml += `<td class="px-4 py-3 text-center"><button ${isClosed ? 'disabled title="Item finalizado: exclusão bloqueada"' : 'title="Apagar Item"'} onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="text-red-500 hover:text-red-700 p-1.5 rounded transition ${isClosed ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-trash-can"></i></button></td>`;
                 tr.innerHTML = rowHtml;
                 tr.addEventListener('click', () => toggleRowDetails(rowIndex, tr));
                 bodyTr.appendChild(tr);
@@ -275,17 +277,37 @@
             rowElement.classList.toggle('bg-indigo-50', isOpen);
         }
 
+        function isItemClosed(rowIndex) {
+            const sheet = state.sheets[state.currentSheet];
+            const statusIndex = sheet.columns.indexOf('Status');
+            return statusIndex >= 0 && String(sheet.rows[rowIndex]?.[statusIndex] ?? '').trim().toLowerCase() === 'finalizado';
+        }
+
         function updateCell(rowIndex, colIndex, value) {
+            if (isItemClosed(rowIndex)) {
+                alert('Este item está finalizado e não pode ser modificado. Altere o status para reabri-lo.');
+                renderTable();
+                return;
+            }
             state.sheets[state.currentSheet].rows[rowIndex][colIndex] = value;
             saveAndSync();
         }
 
         function updateStatus(rowIndex, value) {
+            if (isItemClosed(rowIndex)) {
+                alert('Este item está finalizado. Reabra-o antes de alterar o status.');
+                renderTable();
+                return;
+            }
             state.sheets[state.currentSheet].rows[rowIndex][0] = value;
             saveAndSync();
         }
 
         function deleteRow(rowIndex) {
+            if (isItemClosed(rowIndex)) {
+                alert('Este item está finalizado e não pode ser excluído.');
+                return;
+            }
             if (confirm('Deseja realmente apagar este item?')) {
                 state.sheets[state.currentSheet].rows.splice(rowIndex, 1);
                 renderTable();
