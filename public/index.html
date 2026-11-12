@@ -222,29 +222,19 @@
                 '<th class="px-4 py-3 text-center font-semibold">Ações</th>';
 
             sheet.rows.forEach((row, rowIndex) => {
-                const statusIndex = cols.findIndex(col => col.name === 'Status');
+                const statusIndex = sheet.columns.findIndex(name => name === 'Status');
                 const isClosed = statusIndex >= 0 && String(row[statusIndex] ?? '').trim().toLowerCase() === 'finalizado';
                 const tr = document.createElement('tr');
                 tr.className = 'item-row hover:bg-gray-50 transition border-b border-gray-100 cursor-pointer';
                 tr.dataset.closed = String(isClosed);
                 tr.setAttribute('aria-expanded', 'false');
-                let rowHtml = '';
-                cols.forEach(col => {
-                    if (col.hidden) return;
-                    const val = row[col.index] !== undefined ? row[col.index] : '';
-                    if (col.name === 'Status') {
-                        rowHtml += `<td class="px-4 py-3">
-                            <select title="O status pode ser alterado a qualquer momento" onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="status-editor bg-white text-gray-700 text-xs font-semibold px-2.5 py-1.5 rounded-full border border-gray-300 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                                ${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${val === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
-                            </select></td>`;
-                    } else if (col.name === 'Imagem' && val) {
-                        rowHtml += `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
-                    } else {
-                        rowHtml += `<td class="px-4 py-3 text-gray-700"><input disabled title="${isClosed ? 'Item finalizado: edição bloqueada' : 'Clique na linha para expandir e editar'}" onclick="event.stopPropagation()" type="text" value="${escapeHtml(val)}" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="row-editor pointer-events-none w-full bg-transparent text-gray-700 cursor-not-allowed border-b border-transparent focus:outline-none text-sm py-1"></td>`;
+                tr.innerHTML = visibleCols.map(col => {
+                    const val = row[col.index] ?? '';
+                    if (col.name === 'Imagem' && val) {
+                        return `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
                     }
-                });
-                rowHtml += `<td class="px-4 py-3 text-center"><button disabled title="${isClosed ? 'Item finalizado: exclusão bloqueada' : 'Expanda o item para liberar as ações'}" onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="row-editor pointer-events-none text-red-500 hover:text-red-700 p-1.5 rounded transition opacity-30 cursor-not-allowed"><i class="fa-solid fa-trash-can"></i></button></td>`;
-                tr.innerHTML = rowHtml;
+                    return `<td class="px-4 py-3 text-gray-700">${escapeHtml(val) || '<span class="text-gray-400">—</span>'}</td>`;
+                }).join('') + '<td class="px-4 py-3 text-center text-xs text-indigo-600">Clique para expandir</td>';
                 tr.addEventListener('click', () => toggleRowDetails(rowIndex, tr));
                 bodyTr.appendChild(tr);
 
@@ -253,15 +243,23 @@
                 detailTr.innerHTML = `<td colspan="${visibleCols.length + 1}" class="p-0">
                     <div id="details-${rowIndex}" class="accordion-detail">
                         <div><div class="px-5 py-4 border-b border-indigo-100">
-                            <div class="flex items-center gap-2 text-indigo-800 font-semibold text-xs uppercase tracking-wide mb-3"><i class="fa-solid fa-circle-info"></i> Informações completas do item</div>
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <div class="flex items-center gap-2 text-indigo-800 font-semibold text-xs uppercase tracking-wide"><i class="fa-solid fa-circle-info"></i> Informações completas do item</div>
+                                <span class="text-xs ${isClosed ? 'text-amber-700' : 'text-emerald-700'}">${isClosed ? 'Item finalizado: somente status pode ser alterado' : 'Modo de edição'}</span>
+                            </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 ${cols.map(col => {
                                     const value = row[col.index] ?? '';
-                                    const content = col.name === 'Imagem' && value
-                                        ? `<a href="${escapeHtml(value)}" target="_blank" rel="noopener noreferrer" class="text-indigo-700 underline break-all">Abrir imagem</a>`
-                                        : `<span class="text-gray-800 break-words">${escapeHtml(value) || '<span class="text-gray-400">Não informado</span>'}</span>`;
-                                    return `<div class="bg-white rounded-lg border border-indigo-100 p-3"><div class="text-xs font-semibold text-gray-500 mb-1">${escapeHtml(col.name)}</div><div class="text-sm">${content}</div></div>`;
+                                    const isStatus = col.name === 'Status';
+                                    const locked = isClosed && !isStatus;
+                                    const editor = isStatus
+                                        ? `<select onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm">${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${value === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}</select>`
+                                        : `<input type="text" value="${escapeHtml(value)}" ${locked ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm ${locked ? 'opacity-60 cursor-not-allowed' : ''}" placeholder="Não informado">`;
+                                    return `<label class="bg-white rounded-lg border border-indigo-100 p-3 block"><span class="block text-xs font-semibold text-gray-500 mb-1">${escapeHtml(col.name)}</span>${editor}</label>`;
                                 }).join('')}
+                            </div>
+                            <div class="flex justify-end mt-4">
+                                <button type="button" ${isClosed ? 'disabled' : ''} onclick="event.stopPropagation(); deleteRow(${rowIndex})" class="text-sm px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-trash-can mr-1"></i> Excluir item</button>
                             </div>
                         </div></div>
                     </div>
@@ -275,24 +273,6 @@
             const details = document.getElementById(`details-${rowIndex}`);
             if (!details) return;
             const isOpen = details.classList.toggle('open');
-            const isClosed = rowElement.dataset.closed === 'true';
-            rowElement.querySelectorAll('.row-editor').forEach(control => {
-                control.disabled = isClosed || !isOpen;
-                control.classList.toggle('pointer-events-none', !isOpen || isClosed);
-                control.classList.toggle('cursor-not-allowed', !isOpen || isClosed);
-                if (control.tagName === 'BUTTON') {
-                    control.classList.toggle('opacity-30', !isOpen || isClosed);
-                    control.title = isClosed
-                        ? 'Item finalizado: edição bloqueada'
-                        : (isOpen ? 'Apagar item' : 'Expanda o item para liberar as ações');
-                } else {
-                    control.classList.toggle('bg-transparent', true);
-                    control.classList.toggle('text-gray-700', true);
-                    control.title = isClosed
-                        ? 'Item finalizado: edição bloqueada'
-                        : (isOpen ? 'Campo liberado para edição' : 'Clique na linha para expandir e editar');
-                }
-            });
             rowElement.setAttribute('aria-expanded', String(isOpen));
             rowElement.classList.toggle('bg-indigo-50', isOpen);
         }
@@ -303,9 +283,18 @@
             return statusIndex >= 0 && String(sheet.rows[rowIndex]?.[statusIndex] ?? '').trim().toLowerCase() === 'finalizado';
         }
 
+        function isRowExpanded(rowIndex) {
+            return document.getElementById(`details-${rowIndex}`)?.classList.contains('open') === true;
+        }
+
         function updateCell(rowIndex, colIndex, value) {
+            if (!isRowExpanded(rowIndex)) {
+                alert('Expanda o acordeão do item para editar seus dados.');
+                renderTable();
+                return;
+            }
             if (isItemClosed(rowIndex)) {
-                alert('Este item está finalizado e não pode ser modificado. Altere o status para reabri-lo.');
+                alert('Este item está finalizado. Altere o status para reabri-lo.');
                 renderTable();
                 return;
             }
@@ -314,16 +303,26 @@
         }
 
         function updateStatus(rowIndex, value) {
+            if (!isRowExpanded(rowIndex)) {
+                alert('Expanda o acordeão do item para alterar o status.');
+                renderTable();
+                return;
+            }
             const sheet = state.sheets[state.currentSheet];
             const statusIndex = sheet.columns.indexOf('Status');
             if (statusIndex < 0 || !sheet.rows[rowIndex]) return;
-            // O status permanece editável mesmo com o acordeão recolhido ou item finalizado.
             sheet.rows[rowIndex][statusIndex] = value;
             renderTable();
             saveAndSync();
         }
 
+        
+
         function deleteRow(rowIndex) {
+            if (!isRowExpanded(rowIndex)) {
+                alert('Expanda o acordeão do item para excluí-lo.');
+                return;
+            }
             if (isItemClosed(rowIndex)) {
                 alert('Este item está finalizado e não pode ser excluído.');
                 return;
@@ -385,7 +384,9 @@
                 if (!rowElement || !detailElement) return;
 
                 // Pesquisa em todas as colunas, inclusive as ocultas e os campos do acordeão.
-                const searchableText = normalizeSearchText(row.map(value => String(value ?? '')).join(' '));
+                const barcodeIndex = sheet.columns.findIndex(name => normalizeSearchText(name) === normalizeSearchText('Cód. Barras'));
+                const barcodeValue = barcodeIndex >= 0 ? row[barcodeIndex] : '';
+                const searchableText = normalizeSearchText([...row, barcodeValue].map(value => String(value ?? '')).join(' '));
                 const matches = !query || searchableText.includes(query);
                 rowElement.style.display = matches ? '' : 'none';
                 detailElement.style.display = matches ? '' : 'none';
