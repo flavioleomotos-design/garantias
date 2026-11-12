@@ -188,17 +188,26 @@
             renderTable();
         }
 
-        function setSyncStatus(isSyncing, isError = false) {
+        function setSyncStatus(isSyncing, isError = false, detail = '') {
             const ind = document.getElementById('syncStatusIndicator');
+            if (!ind) return;
             if (isError) {
-                ind.className = "text-xs bg-red-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
-                ind.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Erro de Conexão`;
+                ind.className = "text-xs bg-red-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm max-w-full";
+                ind.replaceChildren();
+                const icon = document.createElement('i');
+                icon.className = "fa-solid fa-triangle-exclamation";
+                const label = document.createElement('span');
+                label.textContent = detail ? `Erro: ${detail}` : 'Erro de Conexão';
+                ind.append(icon, label);
+                ind.title = detail || 'Falha na comunicação com a API.';
             } else if (isSyncing) {
                 ind.className = "text-xs bg-amber-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
                 ind.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...`;
+                ind.title = '';
             } else {
                 ind.className = "text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium shadow-sm";
                 ind.innerHTML = `<i class="fa-solid fa-database"></i> Conectado ao Banco`;
+                ind.title = '';
             }
         }
 
@@ -606,9 +615,7 @@
                 setSyncStatus(false);
             } catch (error) {
                 console.error('Erro ao salvar:', error);
-                setSyncStatus(false, true);
-                const indicator = document.getElementById('syncStatusIndicator');
-                if (indicator) indicator.title = error.message || 'Falha ao salvar no banco de dados.';
+                setSyncStatus(false, true, error.message || 'Falha ao salvar no banco de dados.');
             }
         }
 
@@ -656,7 +663,7 @@
                 });
                 const result = await response.json();
                 if (!response.ok || result.status !== 'success') {
-                    throw new Error(result.message || 'Não foi possível criar as abas de teste.');
+                    throw new Error(`Falha ao preparar a aba "${sheetName}" (HTTP ${response.status}): ${result.message || 'não foi possível gravar no banco.'}`);
                 }
                 state.sheets[sheetName] = payload;
             }
@@ -681,9 +688,7 @@
                 setSyncStatus(false);
             } catch (error) {
                 console.error('Erro ao buscar dados:', error);
-                setSyncStatus(false, true);
-                const indicator = document.getElementById('syncStatusIndicator');
-                if (indicator) indicator.title = error.message || 'Não foi possível carregar os dados.';
+                setSyncStatus(false, true, error.message || 'Não foi possível carregar os dados.');
                 renderAll();
             }
         }
