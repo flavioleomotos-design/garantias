@@ -1,4 +1,5 @@
 {
+  "build": "prisma generate",
   "name": "garantias-main",
   "version": "1.0.0",
   "description": "",
