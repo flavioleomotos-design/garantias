@@ -3,8 +3,8 @@ const DEFAULT_COLUMNS=['Status','Cód. Barras','Descrição','Fornecedor','Defei
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method==='OPTIONS'){res.setHeader('Allow','GET,POST,DELETE,OPTIONS');return res.status(204).end();}
+ const user=await requireUser(req,res,3);if(!user)return;
  try{
-  const user=await requireUser(req,res,3);if(!user)return;
   if(req.method==='GET'){
    const tabs=await prisma.tab.findMany();const sheets={};
    if(!tabs.length)sheets.Garantias={columns:DEFAULT_COLUMNS,hiddenColumns:[],customColumns:[],rows:[]};
