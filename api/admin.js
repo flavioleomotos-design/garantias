@@ -9,11 +9,16 @@ module.exports = async function handler(req,res) {
     prisma.tab.findMany({orderBy:{name:'asc'}}),
     prisma.user.findMany({orderBy:{username:'asc'},select:{id:true,username:true,accessLevel:true,active:true,createdAt:true}})
    ]);
-   return res.status(200).json({status:'success',tabs,users,currentUserId:actor.id});
+   const protectedUsername=(process.env.BOOTSTRAP_ADMIN_USERNAME||'').trim().toLowerCase();
+   return res.status(200).json({status:'success',tabs,users,currentUserId:actor.id,protectedUsername});
   }
   if(req.method==='PUT') {
    const {sheetName,rowIndex,row,userId,accessLevel,active,password}=req.body||{};
    if(userId) {
+    const target=await prisma.user.findUnique({where:{id:userId},select:{id:true,username:true}});
+    if(!target)return res.status(404).json({status:'error',message:'Usuário não encontrado.'});
+    const protectedUsername=(process.env.BOOTSTRAP_ADMIN_USERNAME||'').trim().toLowerCase();
+    if(protectedUsername && target.username.trim().toLowerCase()===protectedUsername)return res.status(403).json({status:'error',message:'A conta principal de bootstrap é protegida e não pode ser editada por outros usuários.'});
     if(userId===actor.id && (accessLevel!==undefined||active!==undefined)) return res.status(403).json({status:'error',message:'Você não pode alterar seu próprio nível ou status.'});
     const data={};
     if(accessLevel!==undefined){if(![1,2,3].includes(Number(accessLevel)))return res.status(400).json({status:'error',message:'Nível inválido.'});data.accessLevel=Number(accessLevel);}
@@ -40,6 +45,10 @@ module.exports = async function handler(req,res) {
   if(req.method==='DELETE') {
    const {sheetName,rowIndex,userId}=req.body||{};
    if(userId) {
+    const target=await prisma.user.findUnique({where:{id:userId},select:{id:true,username:true}});
+    if(!target)return res.status(404).json({status:'error',message:'Usuário não encontrado.'});
+    const protectedUsername=(process.env.BOOTSTRAP_ADMIN_USERNAME||'').trim().toLowerCase();
+    if(protectedUsername && target.username.trim().toLowerCase()===protectedUsername)return res.status(403).json({status:'error',message:'A conta principal de bootstrap é protegida e não pode ser excluída.'});
     if(userId===actor.id)return res.status(403).json({status:'error',message:'Você não pode excluir sua própria conta.'});
     await prisma.user.delete({where:{id:userId}});return res.status(200).json({status:'success'});
    }
