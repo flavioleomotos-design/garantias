@@ -4,7 +4,7 @@
   "description": "Painel de gestão de garantias",
   "main": "api/sheets.js",
   "scripts": {
-    "build": "prisma generate",
+    "build": "prisma generate && prisma db push",
     "postinstall": "prisma generate",
     "db-push": "prisma db push"
   },
