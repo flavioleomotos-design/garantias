@@ -1,59 +1,96 @@
-const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const cors = require('cors');
 
-const prisma = new PrismaClient();
-const app = express();
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.prisma || new PrismaClient();
 
-app.use(cors());
-app.use(express.json());
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
-// Rota para listar todas as abas e dados
-app.get('/api/sheets', async (req, res) => {
-  try {
-    const tabs = await prisma.tab.findMany();
-    const sheetsData = {};
-    
-    if (tabs.length === 0) {
-      // Retorna padrão inicial se estiver vazio
-      sheetsData['Garantias'] = {
-        columns: ['Status', 'Cód. Barras', 'Descrição', 'Fornecedor', 'Defeito', 'Quantidade', 'Imagem', 'Observação', 'Anotações'],
-        hiddenColumns: [],
-        customColumns: [],
-        rows: []
-      };
-    } else {
-      tabs.forEach(t => {
-        sheetsData[t.name] = {
-          columns: t.columns,
-          hiddenColumns: t.hiddenColumns,
-          customColumns: t.customColumns,
-          rows: t.rows
+const DEFAULT_COLUMNS = [
+  'Status', 'Cód. Barras', 'Descrição', 'Fornecedor', 'Defeito',
+  'Quantidade', 'Imagem', 'Observação', 'Anotações'
+];
+
+module.exports = async function handler(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Allow', 'GET, POST, OPTIONS');
+    return res.status(204).end();
+  }
+
+  if (req.method === 'GET') {
+    try {
+      const tabs = await prisma.tab.findMany();
+      const sheets = {};
+
+      if (tabs.length === 0) {
+        sheets.Garantias = {
+          columns: DEFAULT_COLUMNS,
+          hiddenColumns: [],
+          customColumns: [],
+          rows: []
         };
+      } else {
+        for (const tab of tabs) {
+          sheets[tab.name] = {
+            columns: tab.columns,
+            hiddenColumns: tab.hiddenColumns,
+            customColumns: tab.customColumns,
+            rows: tab.rows
+          };
+        }
+      }
+
+      return res.status(200).json({ status: 'success', sheets });
+    } catch (error) {
+      console.error('Erro ao consultar abas:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Não foi possível consultar os dados. Verifique a conexão com o banco.'
       });
     }
-    res.json({ status: 'success', sheets: sheetsData });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
   }
-});
 
-// Rota para salvar/atualizar os dados de uma aba específica
-app.post('/api/sheets', async (req, res) => {
-  try {
-    const { sheetName, columns, hiddenColumns, customColumns, rows } = req.body;
+  if (req.method === 'POST') {
+    try {
+      const { sheetName, columns, hiddenColumns, customColumns, rows } = req.body || {};
 
-    await prisma.tab.upsert({
-      where: { name: sheetName },
-      update: { columns, hiddenColumns, customColumns, rows },
-      create: { name: sheetName, columns, hiddenColumns, customColumns, rows }
-    });
+      if (
+        typeof sheetName !== 'string' || !sheetName.trim() ||
+        !Array.isArray(columns) || !Array.isArray(hiddenColumns) ||
+        !Array.isArray(customColumns) || !Array.isArray(rows)
+      ) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Dados inválidos para salvar a aba.'
+        });
+      }
 
-    res.json({ status: 'success' });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+      await prisma.tab.upsert({
+        where: { name: sheetName.trim() },
+        update: { columns, hiddenColumns, customColumns, rows },
+        create: {
+          name: sheetName.trim(),
+          columns,
+          hiddenColumns,
+          customColumns,
+          rows
+        }
+      });
+
+      return res.status(200).json({ status: 'success' });
+    } catch (error) {
+      console.error('Erro ao salvar aba:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Não foi possível salvar os dados. Verifique a conexão com o banco.'
+      });
+    }
   }
-});
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`));
+  res.setHeader('Allow', 'GET, POST, OPTIONS');
+  return res.status(405).json({
+    status: 'error',
+    message: 'Método não permitido.'
+  });
+};
