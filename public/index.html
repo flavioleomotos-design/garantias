@@ -451,6 +451,7 @@
                 tr.children[2].textContent = result.description ?? '';
                 tr.addEventListener('click', () => {
                     state.currentSheet = result.sheetName;
+                    document.getElementById('searchInput').value = '';
                     renderTabs();
                     renderTable();
                     const row = document.querySelectorAll('#tableBody > tr')[result.rowIndex * 2];
