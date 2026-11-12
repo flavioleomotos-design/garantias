@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administração | Garantias</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+<header class="bg-indigo-800 text-white px-5 py-4 shadow">
+ <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+  <div><h1 class="text-xl font-bold">Administração do Garantias</h1><p class="text-indigo-200 text-sm">Consulta e edição direta dos registros</p></div>
+  <a href="/" class="rounded-lg border border-indigo-300 px-3 py-2 text-sm hover:bg-indigo-700">Voltar ao sistema</a>
+ </div>
+</header>
+<main class="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
+ <section id="loginPanel" class="max-w-md mx-auto bg-white rounded-xl shadow p-6 space-y-3">
+  <h2 class="font-semibold text-lg">Acesso administrativo</h2>
+  <p class="text-sm text-slate-500">Informe a senha administrativa configurada na Vercel.</p>
+  <input id="password" type="password" autocomplete="current-password" placeholder="Senha administrativa" class="w-full border rounded-lg px-3 py-2">
+  <button id="loginButton" class="w-full bg-indigo-600 text-white rounded-lg py-2 hover:bg-indigo-700">Entrar</button>
+  <p id="loginError" class="text-sm text-red-600"></p>
+ </section>
+ <section id="adminPanel" class="hidden space-y-4">
+  <div class="bg-white rounded-xl shadow p-4 flex flex-wrap items-center gap-3 justify-between">
+   <div class="flex items-center gap-3"><label for="tabSelect" class="text-sm font-medium">Aba:</label><select id="tabSelect" class="border rounded-lg px-3 py-2"></select><span id="recordCount" class="text-sm text-slate-500"></span></div>
+   <div class="flex gap-2"><button id="refreshButton" class="border rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Atualizar</button><button id="logoutButton" class="border border-red-200 text-red-600 rounded-lg px-3 py-2 text-sm hover:bg-red-50">Sair</button></div>
+  </div>
+  <div id="message" class="text-sm" role="status"></div>
+  <div class="bg-white rounded-xl shadow overflow-hidden">
+   <div class="overflow-auto max-h-[72vh]">
+    <table class="min-w-full text-sm border-collapse"><thead id="tableHead" class="sticky top-0 bg-slate-100 z-10"></thead><tbody id="tableBody" class="divide-y"></tbody></table>
+   </div>
+  </div>
+ </section>
+</main>
+<script>
+const API='/api/admin';
+let tabs=[];
+let password=sessionStorage.getItem('garantias_admin_password')||'';
+let activeTab='';
+const $=id=>document.getElementById(id);
+function message(text,isError=false){$('message').textContent=text;$('message').className='text-sm '+(isError?'text-red-600':'text-emerald-700');}
+async function request(method='GET',body){
+ const response=await fetch(API,{method,headers:{'Content-Type':'application/json','x-admin-password':password},body:body?JSON.stringify(body):undefined});
+ const data=await response.json().catch(()=>({message:'Resposta inválida do servidor.'}));
+ if(!response.ok) throw new Error(data.message||'Falha na operação.');
+ return data;
+}
+async function login(){
+ password=$('password').value;
+ try{await loadData();sessionStorage.setItem('garantias_admin_password',password);$('loginPanel').classList.add('hidden');$('adminPanel').classList.remove('hidden');}
+ catch(error){$('loginError').textContent=error.message;password='';}
+}
+async function loadData(){
+ const data=await request('GET');tabs=data.tabs||[];
+ if(!tabs.length){$('tabSelect').innerHTML='';renderTable();message('Ainda não existem abas cadastradas.');return;}
+ if(!tabs.some(t=>t.name===activeTab))activeTab=tabs[0].name;
+ $('tabSelect').innerHTML='';
+ tabs.forEach(tab=>{const option=document.createElement('option');option.value=tab.name;option.textContent=tab.name;$('tabSelect').appendChild(option);});
+ $('tabSelect').value=activeTab;renderTable();
+}
+function cellInput(value,rowIndex,colIndex){
+ const input=document.createElement('input');input.type='text';input.value=value??'';
+ input.className='min-w-32 w-full border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-indigo-400 outline-none';
+ input.dataset.col=colIndex;return input;
+}
+function renderTable(){
+ const tab=tabs.find(t=>t.name===activeTab);$('tableHead').innerHTML='';$('tableBody').innerHTML='';
+ if(!tab)return;
+ const header=document.createElement('tr');
+ tab.columns.forEach(name=>{const th=document.createElement('th');th.className='text-left p-3 whitespace-nowrap font-semibold';th.textContent=name;header.appendChild(th);});
+ const action=document.createElement('th');action.className='p-3';action.textContent='Ação';header.appendChild(action);$('tableHead').appendChild(header);
+ (tab.rows||[]).forEach((row,index)=>{
+  const tr=document.createElement('tr');tr.className='align-top hover:bg-slate-50';
+  tab.columns.forEach((name,colIndex)=>{const td=document.createElement('td');td.className='p-2 min-w-40';td.appendChild(cellInput(row[colIndex],index,colIndex));tr.appendChild(td);});
+  const td=document.createElement('td');td.className='p-2 whitespace-nowrap';
+  const save=document.createElement('button');save.textContent='Salvar';save.className='bg-indigo-600 text-white rounded px-3 py-2 hover:bg-indigo-700';
+  save.onclick=async()=>{const updated=Array.from(tr.querySelectorAll('input')).map(input=>input.value);save.disabled=true;save.textContent='Salvando...';try{await request('PUT',{sheetName:tab.name,rowIndex:index,row:updated});tab.rows[index]=updated;message('Registro '+(index+1)+' salvo com sucesso.');}catch(error){message(error.message,true);}finally{save.disabled=false;save.textContent='Salvar';}};
+  td.appendChild(save);tr.appendChild(td);$('tableBody').appendChild(tr);
+ });
+ $('recordCount').textContent=(tab.rows||[]).length+' registro(s)';
+}
+$('loginButton').addEventListener('click',login);
+$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+$('tabSelect').addEventListener('change',e=>{activeTab=e.target.value;renderTable();});
+$('refreshButton').addEventListener('click',async()=>{try{await loadData();message('Dados atualizados.');}catch(error){message(error.message,true);}});
+$('logoutButton').addEventListener('click',()=>{sessionStorage.removeItem('garantias_admin_password');password='';$('adminPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';});
+if(password){$('password').value=password;login();}
+</script>
+</body></html>
