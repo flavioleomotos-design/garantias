@@ -14,7 +14,7 @@ const DEFAULT_COLUMNS = [
 
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
-    res.setHeader('Allow', 'GET, POST, OPTIONS');
+    res.setHeader('Allow', 'GET, POST, DELETE, OPTIONS');
     return res.status(204).end();
   }
 
@@ -85,6 +85,23 @@ module.exports = async function handler(req, res) {
         status: 'error',
         message: 'Não foi possível salvar os dados. Verifique a conexão com o banco.'
       });
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    try {
+      const { sheetName } = req.body || {};
+      if (typeof sheetName !== 'string' || !sheetName.trim()) {
+        return res.status(400).json({ status: 'error', message: 'Nome da aba inválido.' });
+      }
+      await prisma.tab.delete({ where: { name: sheetName.trim() } });
+      return res.status(200).json({ status: 'success' });
+    } catch (error) {
+      if (error && error.code === 'P2025') {
+        return res.status(404).json({ status: 'error', message: 'A aba não foi encontrada.' });
+      }
+      console.error('Erro ao excluir aba:', error);
+      return res.status(500).json({ status: 'error', message: 'Não foi possível excluir a aba.' });
     }
   }
 
