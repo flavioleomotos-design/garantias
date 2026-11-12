@@ -662,29 +662,32 @@
             }
         }
 
-        async function syncWithAPI() {
+        function syncWithAPI() {
             setSyncStatus(true);
-            try {
-                const response = await fetch(API_BASE_URL, {headers: authHeaders(), cache: 'no-store'});
-                const data = await response.json().catch(() => ({}));
-                if (!response.ok) throw new Error(data.message || 'Falha ao consultar o banco (HTTP ' + response.status + ').');
-                if (data.status !== 'success' || !data.sheets) throw new Error(data.message || 'A API não retornou as abas cadastradas.');
-                state.sheets = data.sheets;
-                if (currentUser?.accessLevel === 1) await ensureTestSheets();
-                if (!state.sheets[state.currentSheet]) state.currentSheet = Object.keys(state.sheets)[0] || 'Garantias';
-                renderAll();
-                setSyncStatus(false);
-            } catch (err) {
-                console.error('Falha na sincronização com /api/sheets:', err);
-                setSyncStatus(false, true);
-                renderAll();
-                const body = document.getElementById('tableBody');
-                if (body) {
-                    body.innerHTML = '<tr><td colspan="20" class="px-4 py-8 text-center text-red-600"></td></tr>';
-                    body.querySelector('td').textContent = 'Não foi possível carregar os dados: ' + err.message;
-                }
-            }
+            fetch(API_BASE_URL, {headers:authHeaders()})
+                .then(res => res.json())
+                .then(async res => {
+                    if (res.status === 'success' && res.sheets) {
+                        state.sheets = res.sheets;
+                        if(currentUser?.accessLevel===1) await ensureTestSheets();
+                        // Define a aba inicial se disponível
+                        if (!state.sheets[state.currentSheet]) {
+                            state.currentSheet = Object.keys(state.sheets)[0] || 'Garantias';
+                        }
+                        renderAll();
+                        setSyncStatus(false);
+                    } else {
+                        setSyncStatus(false, true);
+                        renderAll();
+                    }
+                })
+                .catch(err => {
+                    console.error('Erro ao buscar dados:', err);
+                    setSyncStatus(false, true);
+                    renderAll();
+                });
         }
+
         window.onload = initApp;
     </script>
 </body>
