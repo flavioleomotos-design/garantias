@@ -24,7 +24,7 @@
                 <i class="fa-solid fa-boxes-stacked text-2xl"></i>
                 <h1 class="text-xl font-bold">Gestão de Garantias & Produtores</h1>
             </div>
-            <div class="flex items-center gap-3">
+            <div id="syncAdminControls" class="flex items-center gap-3">
                 <button onclick="syncWithAPI()" class="bg-indigo-600 hover:bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-indigo-500">
                     <i class="fa-solid fa-rotate"></i> Sincronizar Agora
                 </button>
@@ -156,6 +156,7 @@
         function logout(){sessionStorage.removeItem('garantias_token');location.reload();}
         function applyPermissions(){
             const level=currentUser?.accessLevel||3;
+            document.getElementById('syncAdminControls')?.classList.toggle('hidden', level !== 1);
             document.querySelectorAll('[onclick="openNewSheetModal()"],[onclick="openNewColumnModal()"],[onclick="openManageColumnsModal()"]').forEach(x=>x.classList.toggle('hidden',level!==1));
             document.querySelectorAll('[onclick="openAddItemModal()"]').forEach(x=>x.classList.toggle('hidden',level>2));
             if(level===1){const a=document.createElement('a');a.href='/admin.html';a.textContent='Administração';a.className='text-white text-sm underline';document.querySelector('header .max-w-7xl').append(a);}
@@ -410,24 +411,55 @@
         function filterTable() {
             const input = document.getElementById('searchInput');
             const body = document.getElementById('tableBody');
-            const sheet = state.sheets[state.currentSheet];
-            if (!input || !body || !sheet) return;
+            const header = document.getElementById('tableHeader');
+            if (!input || !body || !header) return;
 
             const query = normalizeSearchText(input.value);
-            const rows = Array.from(body.children);
+            if (!query) {
+                renderTable();
+                return;
+            }
 
-            sheet.rows.forEach((row, rowIndex) => {
-                const rowElement = rows[rowIndex * 2];
-                const detailElement = rows[rowIndex * 2 + 1];
-                if (!rowElement || !detailElement) return;
-
-                // Pesquisa em todas as colunas, inclusive as ocultas e os campos do acordeão.
+            const results = [];
+            Object.entries(state.sheets).forEach(([sheetName, sheet]) => {
                 const barcodeIndex = sheet.columns.findIndex(name => normalizeSearchText(name) === normalizeSearchText('Cód. Barras'));
-                const barcodeValue = barcodeIndex >= 0 ? row[barcodeIndex] : '';
-                const searchableText = normalizeSearchText([...row, barcodeValue].map(value => String(value ?? '')).join(' '));
-                const matches = !query || searchableText.includes(query);
-                rowElement.style.display = matches ? '' : 'none';
-                detailElement.style.display = matches ? '' : 'none';
+                const descriptionIndex = sheet.columns.findIndex(name => normalizeSearchText(name) === normalizeSearchText('Descrição'));
+                if (barcodeIndex < 0 && descriptionIndex < 0) return;
+
+                sheet.rows.forEach((row, rowIndex) => {
+                    const barcode = barcodeIndex >= 0 ? row[barcodeIndex] : '';
+                    const description = descriptionIndex >= 0 ? row[descriptionIndex] : '';
+                    if ([barcode, description].some(value => normalizeSearchText(value).includes(query))) {
+                        results.push({sheetName, rowIndex, barcode, description});
+                    }
+                });
+            });
+
+            header.innerHTML = '<th class="px-4 py-3 font-semibold">Aba</th><th class="px-4 py-3 font-semibold">Cód. Barras</th><th class="px-4 py-3 font-semibold">Descrição</th>';
+            body.innerHTML = '';
+            if (!results.length) {
+                body.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">Nenhum item encontrado nas colunas Cód. Barras e Descrição.</td></tr>';
+                return;
+            }
+
+            results.forEach(result => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100 hover:bg-indigo-50 cursor-pointer';
+                tr.innerHTML = '<td class="px-4 py-3 font-medium text-indigo-700"></td><td class="px-4 py-3"></td><td class="px-4 py-3"></td>';
+                tr.children[0].textContent = result.sheetName;
+                tr.children[1].textContent = result.barcode ?? '';
+                tr.children[2].textContent = result.description ?? '';
+                tr.addEventListener('click', () => {
+                    state.currentSheet = result.sheetName;
+                    renderTabs();
+                    renderTable();
+                    const row = document.querySelectorAll('#tableBody > tr')[result.rowIndex * 2];
+                    if (row) {
+                        row.scrollIntoView({behavior:'smooth', block:'center'});
+                        toggleRowDetails(result.rowIndex, row);
+                    }
+                });
+                body.appendChild(tr);
             });
         }
 
