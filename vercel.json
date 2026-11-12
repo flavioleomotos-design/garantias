@@ -1,4 +1,10 @@
 {
   "version": 2,
-  "outputDirectory": "public"
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    }
+  ]
 }
