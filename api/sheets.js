@@ -3,8 +3,8 @@ const DEFAULT_COLUMNS=['Status','Cód. Barras','Descrição','Fornecedor','Defei
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method==='OPTIONS'){res.setHeader('Allow','GET,POST,DELETE,OPTIONS');return res.status(204).end();}
- const user=await requireUser(req,res,3);if(!user)return;
  try{
+  const user=await requireUser(req,res,3);if(!user)return;
   if(req.method==='GET'){
    const tabs=await prisma.tab.findMany();const sheets={};
    if(!tabs.length)sheets.Garantias={columns:DEFAULT_COLUMNS,hiddenColumns:[],customColumns:[],rows:[]};
@@ -27,5 +27,11 @@ module.exports=async function handler(req,res){
    await prisma.tab.delete({where:{name:sheetName.trim()}});return res.status(200).json({status:'success'});
   }
   res.setHeader('Allow','GET,POST,DELETE,OPTIONS');return res.status(405).end();
- }catch(e){if(e.code==='P2025')return res.status(404).json({status:'error',message:'Aba não encontrada.'});console.error(e);return res.status(500).json({status:'error',message:'Erro ao acessar o banco.'});}
+ }catch(e){
+  console.error('[sheets] Falha na operação do banco:', e.code || e.name);
+  if(e.code==='P2025')return res.status(404).json({status:'error',message:'Aba não encontrada.'});
+  const connectionCodes=['P1000','P1001','P1002','P1017','P2024'];
+  if(connectionCodes.includes(e.code))return res.status(503).json({status:'error',code:e.code,message:'Não foi possível conectar ao banco de dados. Verifique a conexão PostgreSQL.'});
+  return res.status(500).json({status:'error',code:e.code || 'DATABASE_ERROR',message:'Erro ao acessar o banco de dados.'});
+ }
 };
