@@ -1,90 +1,17 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Administração | Garantias</title>
-<script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-slate-100 text-slate-800">
-<header class="bg-indigo-800 text-white px-5 py-4 shadow">
- <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-  <div><h1 class="text-xl font-bold">Administração do Garantias</h1><p class="text-indigo-200 text-sm">Consulta e edição direta dos registros</p></div>
-  <a href="/" class="rounded-lg border border-indigo-300 px-3 py-2 text-sm hover:bg-indigo-700">Voltar ao sistema</a>
- </div>
-</header>
-<main class="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
- <section id="loginPanel" class="max-w-md mx-auto bg-white rounded-xl shadow p-6 space-y-3">
-  <h2 class="font-semibold text-lg">Acesso administrativo</h2>
-  <p class="text-sm text-slate-500">Informe a senha administrativa configurada na Vercel.</p>
-  <input id="password" type="password" autocomplete="current-password" placeholder="Senha administrativa" class="w-full border rounded-lg px-3 py-2">
-  <button id="loginButton" class="w-full bg-indigo-600 text-white rounded-lg py-2 hover:bg-indigo-700">Entrar</button>
-  <p id="loginError" class="text-sm text-red-600"></p>
- </section>
- <section id="adminPanel" class="hidden space-y-4">
-  <div class="bg-white rounded-xl shadow p-4 flex flex-wrap items-center gap-3 justify-between">
-   <div class="flex items-center gap-3"><label for="tabSelect" class="text-sm font-medium">Aba:</label><select id="tabSelect" class="border rounded-lg px-3 py-2"></select><span id="recordCount" class="text-sm text-slate-500"></span></div>
-   <div class="flex gap-2"><button id="refreshButton" class="border rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Atualizar</button><button id="logoutButton" class="border border-red-200 text-red-600 rounded-lg px-3 py-2 text-sm hover:bg-red-50">Sair</button></div>
-  </div>
-  <div id="message" class="text-sm" role="status"></div>
-  <div class="bg-white rounded-xl shadow overflow-hidden">
-   <div class="overflow-auto max-h-[72vh]">
-    <table class="min-w-full text-sm border-collapse"><thead id="tableHead" class="sticky top-0 bg-slate-100 z-10"></thead><tbody id="tableBody" class="divide-y"></tbody></table>
-   </div>
-  </div>
- </section>
-</main>
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administração | Garantias</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="min-h-screen bg-slate-100 text-slate-800"><header class="bg-indigo-800 text-white p-4"><div class="max-w-7xl mx-auto flex justify-between"><div><h1 class="text-xl font-bold">Administração do Garantias</h1><p class="text-indigo-200 text-sm">Acesso restrito — nível 1</p></div><a href="/" class="border rounded px-3 py-2">Voltar ao sistema</a></div></header>
+<main class="max-w-7xl mx-auto p-4 space-y-5"><section id="loginPanel" class="max-w-md mx-auto bg-white rounded-xl shadow p-6 space-y-3"><h2 class="font-semibold text-lg">Entrar</h2><input id="username" autocomplete="username" placeholder="Usuário" class="w-full border rounded-lg px-3 py-2"><input id="password" type="password" autocomplete="current-password" placeholder="Senha" class="w-full border rounded-lg px-3 py-2"><button id="loginButton" class="w-full bg-indigo-600 text-white rounded-lg py-2">Entrar</button><p id="loginError" class="text-sm text-red-600"></p></section>
+<section id="adminPanel" class="hidden space-y-4"><div class="bg-white rounded-xl shadow p-4 flex flex-wrap gap-3 items-center justify-between"><div class="flex gap-3 items-center"><label>Aba:</label><select id="tabSelect" class="border rounded px-3 py-2"></select><span id="recordCount" class="text-sm text-slate-500"></span></div><div class="flex gap-2"><button id="refreshButton" class="border rounded px-3 py-2">Atualizar</button><button id="logoutButton" class="border border-red-200 text-red-600 rounded px-3 py-2">Sair</button></div></div>
+<p id="message" class="text-sm" role="status"></p><div class="bg-white rounded-xl shadow overflow-auto max-h-[65vh]"><table class="min-w-full text-sm"><thead id="tableHead" class="sticky top-0 bg-slate-100"></thead><tbody id="tableBody" class="divide-y"></tbody></table></div>
+<section class="bg-white rounded-xl shadow p-4 space-y-3"><div class="flex justify-between"><h2 class="font-semibold text-lg">Usuários</h2><span class="text-xs text-slate-500">Nível 1: total · 2: editar · 3: visualizar</span></div><div class="grid md:grid-cols-4 gap-2"><input id="newUsername" placeholder="Novo usuário" class="border rounded px-3 py-2"><input id="newPassword" type="password" placeholder="Senha (mín. 8 caracteres)" class="border rounded px-3 py-2"><select id="newLevel" class="border rounded px-3 py-2"><option value="3" selected>Nível 3 — Visualizar</option><option value="2">Nível 2 — Editar itens</option><option value="1">Nível 1 — Total</option></select><button id="createUser" class="bg-indigo-600 text-white rounded px-3 py-2">Criar usuário</button></div><div class="overflow-auto"><table class="min-w-full text-sm"><thead class="bg-slate-100"><tr><th class="p-2 text-left">Usuário</th><th class="p-2">Nível</th><th class="p-2">Status</th><th class="p-2">Ações</th></tr></thead><tbody id="usersBody"></tbody></table></div></section></section></main>
 <script>
-const API='/api/admin';
-let tabs=[];
-let password=sessionStorage.getItem('garantias_admin_password')||'';
-let activeTab='';
-const $=id=>document.getElementById(id);
-function message(text,isError=false){$('message').textContent=text;$('message').className='text-sm '+(isError?'text-red-600':'text-emerald-700');}
-async function request(method='GET',body){
- const response=await fetch(API,{method,headers:{'Content-Type':'application/json','x-admin-password':password},body:body?JSON.stringify(body):undefined});
- const data=await response.json().catch(()=>({message:'Resposta inválida do servidor.'}));
- if(!response.ok) throw new Error(data.message||'Falha na operação.');
- return data;
-}
-async function login(){
- password=$('password').value;
- try{await loadData();sessionStorage.setItem('garantias_admin_password',password);$('loginPanel').classList.add('hidden');$('adminPanel').classList.remove('hidden');}
- catch(error){$('loginError').textContent=error.message;password='';}
-}
-async function loadData(){
- const data=await request('GET');tabs=data.tabs||[];
- if(!tabs.length){$('tabSelect').innerHTML='';renderTable();message('Ainda não existem abas cadastradas.');return;}
- if(!tabs.some(t=>t.name===activeTab))activeTab=tabs[0].name;
- $('tabSelect').innerHTML='';
- tabs.forEach(tab=>{const option=document.createElement('option');option.value=tab.name;option.textContent=tab.name;$('tabSelect').appendChild(option);});
- $('tabSelect').value=activeTab;renderTable();
-}
-function cellInput(value,rowIndex,colIndex){
- const input=document.createElement('input');input.type='text';input.value=value??'';
- input.className='min-w-32 w-full border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-indigo-400 outline-none';
- input.dataset.col=colIndex;return input;
-}
-function renderTable(){
- const tab=tabs.find(t=>t.name===activeTab);$('tableHead').innerHTML='';$('tableBody').innerHTML='';
- if(!tab)return;
- const header=document.createElement('tr');
- tab.columns.forEach(name=>{const th=document.createElement('th');th.className='text-left p-3 whitespace-nowrap font-semibold';th.textContent=name;header.appendChild(th);});
- const action=document.createElement('th');action.className='p-3';action.textContent='Ação';header.appendChild(action);$('tableHead').appendChild(header);
- (tab.rows||[]).forEach((row,index)=>{
-  const tr=document.createElement('tr');tr.className='align-top hover:bg-slate-50';
-  tab.columns.forEach((name,colIndex)=>{const td=document.createElement('td');td.className='p-2 min-w-40';td.appendChild(cellInput(row[colIndex],index,colIndex));tr.appendChild(td);});
-  const td=document.createElement('td');td.className='p-2 whitespace-nowrap';
-  const save=document.createElement('button');save.textContent='Salvar';save.className='bg-indigo-600 text-white rounded px-3 py-2 hover:bg-indigo-700';
-  save.onclick=async()=>{const updated=Array.from(tr.querySelectorAll('input')).map(input=>input.value);save.disabled=true;save.textContent='Salvando...';try{await request('PUT',{sheetName:tab.name,rowIndex:index,row:updated});tab.rows[index]=updated;message('Registro '+(index+1)+' salvo com sucesso.');}catch(error){message(error.message,true);}finally{save.disabled=false;save.textContent='Salvar';}};
-  td.appendChild(save);tr.appendChild(td);$('tableBody').appendChild(tr);
- });
- $('recordCount').textContent=(tab.rows||[]).length+' registro(s)';
-}
-$('loginButton').addEventListener('click',login);
-$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
-$('tabSelect').addEventListener('change',e=>{activeTab=e.target.value;renderTable();});
-$('refreshButton').addEventListener('click',async()=>{try{await loadData();message('Dados atualizados.');}catch(error){message(error.message,true);}});
-$('logoutButton').addEventListener('click',()=>{sessionStorage.removeItem('garantias_admin_password');password='';$('adminPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';});
-if(password){$('password').value=password;login();}
-</script>
-</body></html>
+const API='/api', $=id=>document.getElementById(id);let token=sessionStorage.getItem('garantias_token')||'',tabs=[],users=[],activeTab='',currentUserId='';
+function msg(t,bad=false){$('message').textContent=t;$('message').className='text-sm '+(bad?'text-red-600':'text-emerald-700');}
+async function call(path,method='GET',body){const r=await fetch(API+path,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined});const d=await r.json().catch(()=>({message:'Resposta inválida.'}));if(!r.ok)throw Error(d.message||'Falha na operação.');return d;}
+async function login(){try{const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});const d=await r.json();if(!r.ok)throw Error(d.message);token=d.token;sessionStorage.setItem('garantias_token',token);await load();$('loginPanel').classList.add('hidden');$('adminPanel').classList.remove('hidden');}catch(e){$('loginError').textContent=e.message;}}
+async function load(){const d=await call('/admin');tabs=d.tabs||[];users=d.users||[];currentUserId=d.currentUserId; if(!tabs.some(t=>t.name===activeTab))activeTab=tabs[0]?.name||'';$('tabSelect').innerHTML='';tabs.forEach(t=>{const o=document.createElement('option');o.value=t.name;o.textContent=t.name;$('tabSelect').append(o);});$('tabSelect').value=activeTab;renderRows();renderUsers();}
+function renderRows(){const t=tabs.find(x=>x.name===activeTab);$('tableHead').innerHTML='';$('tableBody').innerHTML='';if(!t)return;const h=document.createElement('tr');t.columns.forEach(c=>{const th=document.createElement('th');th.className='p-3 text-left whitespace-nowrap';th.textContent=c;h.append(th);});const th=document.createElement('th');th.className='p-3';th.textContent='Ações';h.append(th);$('tableHead').append(h);
+(t.rows||[]).forEach((row,i)=>{const tr=document.createElement('tr');t.columns.forEach((c,j)=>{const td=document.createElement('td');td.className='p-2 min-w-40';const input=document.createElement('input');input.value=row[j]??'';input.className='w-full min-w-32 border rounded px-2 py-1';td.append(input);tr.append(td);});const td=document.createElement('td');td.className='p-2 whitespace-nowrap';const save=document.createElement('button');save.textContent='Salvar';save.className='bg-indigo-600 text-white rounded px-3 py-2 mr-2';save.onclick=async()=>{try{await call('/admin','PUT',{sheetName:t.name,rowIndex:i,row:Array.from(tr.querySelectorAll('input')).map(x=>x.value)});msg('Registro salvo.');}catch(e){msg(e.message,true);}};const del=document.createElement('button');del.textContent='Excluir definitivamente';del.className='bg-red-600 text-white rounded px-3 py-2';del.onclick=async()=>{if(!confirm('Excluir permanentemente este item? Esta ação não pode ser desfeita.'))return;try{await call('/admin','DELETE',{sheetName:t.name,rowIndex:i});t.rows.splice(i,1);renderRows();msg('Item excluído definitivamente.');}catch(e){msg(e.message,true);}};td.append(save,del);tr.append(td);$('tableBody').append(tr);});$('recordCount').textContent=(t.rows||[]).length+' registro(s)';}
+function renderUsers(){$('usersBody').innerHTML='';users.forEach(u=>{const tr=document.createElement('tr');tr.className='border-t';const name=document.createElement('td');name.className='p-2';name.textContent=u.username;const level=document.createElement('td');level.className='p-2 text-center';const select=document.createElement('select');select.className='border rounded p-1';[1,2,3].forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent='Nível '+n;o.selected=u.accessLevel===n;select.append(o);});select.disabled=u.id===currentUserId;const status=document.createElement('td');status.className='p-2 text-center';status.textContent=u.active?'Ativo':'Inativo';const actions=document.createElement('td');actions.className='p-2 text-center';const save=document.createElement('button');save.textContent='Salvar nível';save.className='border rounded px-2 py-1 mr-2';save.disabled=u.id===currentUserId;save.onclick=async()=>{try{await call('/admin','PUT',{userId:u.id,accessLevel:Number(select.value)});u.accessLevel=Number(select.value);msg('Nível atualizado.');}catch(e){msg(e.message,true);}};const del=document.createElement('button');del.textContent='Excluir conta';del.className='text-red-600 border border-red-200 rounded px-2 py-1';del.disabled=u.id===currentUserId;del.onclick=async()=>{if(!confirm('Excluir a conta '+u.username+'?'))return;try{await call('/admin','DELETE',{userId:u.id});await load();msg('Conta excluída.');}catch(e){msg(e.message,true);}};actions.append(save,del);level.append(select);tr.append(name,level,status,actions);$('usersBody').append(tr);});}
+$('loginButton').onclick=login;$('password').onkeydown=e=>{if(e.key==='Enter')login();};$('tabSelect').onchange=e=>{activeTab=e.target.value;renderRows();};$('refreshButton').onclick=async()=>{try{await load();msg('Dados atualizados.');}catch(e){msg(e.message,true);}};$('createUser').onclick=async()=>{try{await call('/admin','POST',{username:$('newUsername').value,password:$('newPassword').value,accessLevel:Number($('newLevel').value)});$('newUsername').value='';$('newPassword').value='';await load();msg('Usuário criado.');}catch(e){msg(e.message,true);}};$('logoutButton').onclick=()=>{sessionStorage.removeItem('garantias_token');token='';$('adminPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden');};if(token)load().then(()=>{$('loginPanel').classList.add('hidden');$('adminPanel').classList.remove('hidden');}).catch(()=>{token='';sessionStorage.removeItem('garantias_token');});
+</script></body></html>
