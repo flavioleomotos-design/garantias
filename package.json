@@ -1,19 +1,21 @@
 {
   "name": "garantias-main",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Painel de gestão de garantias",
+  "main": "api/sheets.js",
   "scripts": {
-  "build": "prisma generate",
-  "postinstall": "prisma generate",
-  "db-push": "prisma db push"
-},
+    "build": "prisma generate",
+    "postinstall": "prisma generate",
+    "db-push": "prisma db push"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "5.22.0"
+  },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
-    "prisma": "^5.22.0"
+    "prisma": "5.22.0"
   }
 }
