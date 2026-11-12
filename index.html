@@ -53,6 +53,22 @@ input:focus,select:focus,textarea:focus{outline:none!important;border-color:#268
 .fixed.inset-0.z-50>div{border:1px solid #e4eaf2;border-radius:18px!important;box-shadow:0 24px 70px rgba(15,30,55,.2)!important}
 @media(max-width:767px){main{padding:16px!important;gap:14px!important}header .max-w-7xl{padding:14px 16px!important}header h1{font-size:15px!important}aside{position:static!important}#sheetTabsContainer{max-height:180px!important}#syncAdminControls{flex-wrap:wrap;justify-content:center}}
 
+
+/* Cabeçalho com cor sólida e botão de sincronização sem contorno. */
+header{
+  background:#172c4c!important;
+  background-image:none!important;
+}
+#syncAdminControls>button{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+#syncAdminControls>button:focus,
+#syncAdminControls>button:focus-visible{
+  outline:none!important;
+  box-shadow:none!important;
+}
 </style>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
