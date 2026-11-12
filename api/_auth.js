@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
-const prisma = globalThis.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
+const prisma = globalThis.prisma || new PrismaClient({ log: ['error'] });
+globalThis.prisma = prisma;
 const secret = process.env.AUTH_SECRET;
 function sign(payload) {
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -27,11 +27,17 @@ async function requireUser(req, res, minLevel = 3) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const payload = verify(token);
   if (!payload) { res.status(401).json({ status:'error', message:'Faça login para continuar.' }); return null; }
-  const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-  if (!user || !user.active || user.accessLevel > minLevel) {
-    res.status(403).json({ status:'error', message:'Você não tem permissão para esta operação.' }); return null;
+  try {
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user || !user.active || user.accessLevel > minLevel) {
+      res.status(403).json({ status:'error', message:'Você não tem permissão para esta operação.' }); return null;
+    }
+    return user;
+  } catch (error) {
+    console.error('[auth] Falha ao consultar usuário no banco:', error.code || error.name);
+    res.status(503).json({ status:'error', code:error.code || 'DATABASE_UNAVAILABLE', message:'Banco de dados temporariamente indisponível. Tente novamente em instantes.' });
+    return null;
   }
-  return user;
 }
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
