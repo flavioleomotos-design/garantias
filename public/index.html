@@ -38,6 +38,9 @@ input,select,textarea{font-family:"Open Sans",sans-serif!important;border-color:
 input:focus,select:focus,textarea:focus{outline:none!important;border-color:#2685a0!important;box-shadow:0 0 0 3px rgba(38,133,160,.13)!important}
 #searchInput{min-height:42px;background:#f9fbfd}
 #dynamicTable{font-size:13px!important}
+/* Limita a descrição na tabela principal e indica continuação com reticências. */
+#tableBody td.description-cell{width:260px;max-width:260px}
+#tableBody .description-text{display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #tableHeader{background:#f4f7fb!important;color:#52627a!important}
 #tableHeader th{padding:14px 16px!important;font-size:10px!important;font-weight:700!important;letter-spacing:.09em!important;white-space:nowrap}
 #tableBody td{padding:13px 16px!important;vertical-align:middle}
@@ -350,6 +353,10 @@ header{
                     const val = row[col.index] ?? '';
                     if (col.name === 'Imagem' && val) {
                         return `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
+                    }
+                    if (col.name === 'Descrição') {
+                        const description = escapeHtml(val);
+                        return `<td class="px-4 py-3 text-gray-700 description-cell" title="${description}"><span class="description-text">${description || '<span class="text-gray-400">—</span>'}</span></td>`;
                     }
                     return `<td class="px-4 py-3 text-gray-700">${escapeHtml(val) || '<span class="text-gray-400">—</span>'}</td>`;
                 }).join('');
