@@ -334,9 +334,9 @@ header{
             headerTr.innerHTML = '';
             bodyTr.innerHTML = '';
             const cols = getActiveColumns();
-            const visibleCols = cols.filter(c => !c.hidden);
-            headerTr.innerHTML = visibleCols.map(col => `<th class="px-4 py-3 font-semibold">${escapeHtml(col.name)}</th>`).join('') +
-                '<th class="px-4 py-3 text-center font-semibold">Ações</th>';
+            // Anotações ficam disponíveis somente dentro do acordeão expandido.
+            const visibleCols = cols.filter(c => !c.hidden && c.name !== 'Anotações');
+            headerTr.innerHTML = visibleCols.map(col => `<th class="px-4 py-3 font-semibold">${escapeHtml(col.name)}</th>`).join('');
 
             sheet.rows.forEach((row, rowIndex) => {
                 const statusIndex = sheet.columns.findIndex(name => name === 'Status');
@@ -352,13 +352,13 @@ header{
                         return `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
                     }
                     return `<td class="px-4 py-3 text-gray-700">${escapeHtml(val) || '<span class="text-gray-400">—</span>'}</td>`;
-                }).join('') + '<td class="px-4 py-3 text-center text-xs text-indigo-600">Clique para expandir</td>';
+                }).join('');
                 tr.addEventListener('click', () => toggleRowDetails(rowIndex, tr));
                 bodyTr.appendChild(tr);
 
                 const detailTr = document.createElement('tr');
                 detailTr.className = 'bg-indigo-50/60';
-                detailTr.innerHTML = `<td colspan="${visibleCols.length + 1}" class="p-0">
+                detailTr.innerHTML = `<td colspan="${Math.max(visibleCols.length, 1)}" class="p-0">
                     <div id="details-${rowIndex}" class="accordion-detail">
                         <div><div class="px-5 py-4 border-b border-indigo-100">
                             <div class="flex items-center justify-between gap-3 mb-3">
