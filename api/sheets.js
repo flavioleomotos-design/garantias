@@ -17,6 +17,16 @@ module.exports=async function handler(req,res){
    const existing=await prisma.tab.findUnique({where:{name:sheetName.trim()}});
    // Nível 3 pode alterar somente campos de itens já finalizados, sem mudar status,
    // estrutura da aba ou quantidade/ordem dos registros.
+   if(user.accessLevel<=2 && existing){
+    const statusIndex=existing.columns.indexOf('Status');
+    if(statusIndex>=0){
+     for(let i=0;i<Math.min(existing.rows.length,rows.length);i++){
+      const before=existing.rows[i]||[];const after=rows[i]||[];
+      const wasFinalized=String(before[statusIndex]??'').trim().toLowerCase()==='finalizado';
+      if(wasFinalized&&JSON.stringify(before)!==JSON.stringify(after))return res.status(403).json({status:'error',message:'Itens finalizados só podem ser editados por usuários de nível 3.'});
+     }
+    }
+   }
    if(user.accessLevel===3){
     if(!existing)return res.status(403).json({status:'error',message:'Usuários de nível 3 não podem criar abas.'});
     if(JSON.stringify(existing.columns)!==JSON.stringify(columns)||JSON.stringify(existing.hiddenColumns)!==JSON.stringify(hiddenColumns)||JSON.stringify(existing.customColumns)!==JSON.stringify(customColumns))return res.status(403).json({status:'error',message:'Usuários de nível 3 não podem alterar a estrutura das abas.'});
