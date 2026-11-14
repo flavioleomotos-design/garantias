@@ -77,9 +77,22 @@ header{
 
 /* Reduz em aproximadamente 80% o espaçamento vertical entre registros. */
 #tableBody tr.item-row>td{
-  padding-top:3px!important;
-  padding-bottom:3px!important;
+  height:24px!important;
+  box-sizing:border-box!important;
+  padding:0 12px!important;
+  line-height:24px!important;
 }
+#tableBody tr.item-row>td .table-cell-text,
+#tableBody tr.item-row>td .description-text{line-height:24px!important}
+#tableBody .image-link-button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-width:88px;height:22px;padding:0 9px;border:1px solid #cbd5e1;
+  border-radius:6px;background:#f8fafc;color:#176b87;font-size:11px;
+  font-weight:600;text-decoration:none;line-height:1;white-space:nowrap
+}
+#tableBody .image-link-button:hover{background:#eaf3f7;border-color:#9bb9c8}
+#tableBody .accordion-image-link{color:#176b87;text-decoration:underline;overflow-wrap:anywhere}
+#tableBody .accordion-image-link:hover{color:#12566e}
 #tableBody tr[class~="bg-indigo-50/60"]>td{
   padding:0!important;
   line-height:0!important;
@@ -252,7 +265,7 @@ header{
                     rows: []
                 }
             },
-            currentSheet: 'Garantias'
+            currentSheet: localStorage.getItem('garantias_current_sheet') || 'Garantias'
         };
 
         const statusOptions = ['Pendente', 'Saída', 'Separado', 'Enviado', 'Finalizado'];
@@ -305,7 +318,7 @@ header{
                 btn.type = 'button';
                 btn.className = `flex-1 min-w-0 text-left px-3 py-2.5 text-sm rounded-lg transition ${isActive ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-700 hover:bg-indigo-50'}`;
                 btn.textContent = sheetName;
-                btn.onclick = () => { state.currentSheet = sheetName; renderTable(); renderTabs(); };
+                btn.onclick = () => { state.currentSheet = sheetName; localStorage.setItem('garantias_current_sheet', sheetName); renderTable(); renderTabs(); };
                 group.append(btn);
                 if (canManageSheets) {
                     const remove = document.createElement('button');
@@ -324,6 +337,13 @@ header{
         function getActiveColumns() {
             const s = state.sheets[state.currentSheet];
             return s.columns.map((col, index) => ({ name: col, index, hidden: s.hiddenColumns.includes(col) }));
+        }
+
+        function safeHref(value) {
+            try {
+                const url = new URL(String(value ?? '').trim(), window.location.origin);
+                return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+            } catch { return ''; }
         }
 
         function escapeHtml(value) {
@@ -347,7 +367,8 @@ header{
             sheet.rows.forEach((row, rowIndex) => {
                 const statusIndex = sheet.columns.findIndex(name => name === 'Status');
                 const isClosed = statusIndex >= 0 && String(row[statusIndex] ?? '').trim().toLowerCase() === 'finalizado';
-                const canEdit = currentUser && currentUser.accessLevel <= 2;
+                const isLevel3 = currentUser?.accessLevel === 3;
+                const canEdit = currentUser && (currentUser.accessLevel <= 2 || (isLevel3 && isClosed));
                 const tr = document.createElement('tr');
                 tr.className = 'item-row hover:bg-gray-50 transition border-b border-gray-100 cursor-pointer';
                 tr.dataset.closed = String(isClosed);
@@ -355,7 +376,7 @@ header{
                 tr.innerHTML = visibleCols.map(col => {
                     const val = row[col.index] ?? '';
                     if (col.name === 'Imagem' && val) {
-                        return `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(val)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline text-xs">Ver Imagem</a></td>`;
+                        return `<td class="px-4 py-3"><a onclick="event.stopPropagation()" href="${escapeHtml(safeHref(val))}" target="_blank" rel="noopener noreferrer" class="image-link-button"><i class="fa-solid fa-image"></i> Ver Imagem</a></td>`;
                     }
                     if (col.name === 'Descrição') {
                         const description = escapeHtml(val);
@@ -374,15 +395,18 @@ header{
                         <div><div class="px-5 py-4 border-b border-indigo-100">
                             <div class="flex items-center justify-between gap-3 mb-3">
                                 <div class="flex items-center gap-2 text-indigo-800 font-semibold text-xs uppercase tracking-wide"><i class="fa-solid fa-circle-info"></i> Informações completas do item</div>
-                                <span class="text-xs ${isClosed ? 'text-amber-700' : 'text-emerald-700'}">${isClosed ? 'Item finalizado: somente status pode ser alterado' : 'Modo de edição'}</span>
+                                <span class="text-xs ${isClosed ? 'text-amber-700' : 'text-emerald-700'}">${isClosed ? (isLevel3 ? 'Item finalizado: edição liberada para nível 3' : 'Item finalizado: edição restrita ao nível 3') : 'Modo de edição'}</span>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 ${cols.map(col => {
                                     const value = row[col.index] ?? '';
                                     const isStatus = col.name === 'Status';
-                                    const locked = isClosed && !isStatus;
-                                    const editor = !canEdit ? `<span class="text-sm text-gray-700">${escapeHtml(value) || 'Não informado'}</span>` : isStatus
-                                        ? `<select onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm">${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${value === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}</select>`
+                                    const locked = isClosed && !isLevel3;
+                                    const imageUrl = col.name === 'Imagem' ? safeHref(value) : '';
+                                    const editor = col.name === 'Imagem'
+                                        ? `<div class="flex flex-col gap-2">${imageUrl ? `<a href="${escapeHtml(imageUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="accordion-image-link text-sm">${escapeHtml(value)}</a>` : `<span class="text-sm text-gray-500">${escapeHtml(value) || 'Não informado'}</span>`}${canEdit && !locked ? `<input type="text" value="${escapeHtml(value)}" onclick="event.stopPropagation()" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm" placeholder="URL da imagem">` : ''}</div>`
+                                        : !canEdit ? `<span class="text-sm text-gray-700">${escapeHtml(value) || 'Não informado'}</span>` : isStatus
+                                        ? `<select disabled onclick="event.stopPropagation()" onchange="updateStatus(${rowIndex}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm opacity-60 cursor-not-allowed">${statusOptions.map(opt => `<option value="${escapeHtml(opt)}" ${value === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}</select>`
                                         : `<input type="text" value="${escapeHtml(value)}" ${locked ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="updateCell(${rowIndex}, ${col.index}, this.value)" class="detail-editor w-full bg-white text-gray-800 border border-indigo-200 rounded-md px-2 py-1.5 text-sm ${locked ? 'opacity-60 cursor-not-allowed' : ''}" placeholder="Não informado">`;
                                     return `<label class="bg-white rounded-lg border border-indigo-100 p-3 block"><span class="block text-xs font-semibold text-gray-500 mb-1">${escapeHtml(col.name)}</span>${editor}</label>`;
                                 }).join('')}
@@ -424,11 +448,12 @@ header{
                 renderTable();
                 return;
             }
-            if (isItemClosed(rowIndex)) {
-                alert('Este item está finalizado. Altere o status para reabri-lo.');
+            if (isItemClosed(rowIndex) && currentUser?.accessLevel !== 3) {
+                alert('Este item está finalizado. Somente usuários de nível 3 podem editar seus dados.');
                 renderTable();
                 return;
             }
+            if (!isItemClosed(rowIndex) && currentUser?.accessLevel === 3) return;
             state.sheets[state.currentSheet].rows[rowIndex][colIndex] = value;
             saveAndSync();
         }
@@ -486,6 +511,7 @@ header{
                 if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Não foi possível excluir a aba.');
                 delete state.sheets[sheetName];
                 if (state.currentSheet === sheetName) state.currentSheet = Object.keys(state.sheets)[0];
+                localStorage.setItem('garantias_current_sheet', state.currentSheet);
                 renderAll();
                 setSyncStatus(false);
             } catch (error) {
@@ -767,8 +793,11 @@ header{
                 }
                 state.sheets = result.sheets;
                 if(currentUser?.accessLevel===1) await ensureTestSheets();
-                if (!state.sheets[state.currentSheet]) {
+                const rememberedSheet = localStorage.getItem('garantias_current_sheet');
+                if (rememberedSheet && state.sheets[rememberedSheet]) state.currentSheet = rememberedSheet;
+                else {
                     state.currentSheet = Object.keys(state.sheets)[0] || 'Garantias';
+                    localStorage.setItem('garantias_current_sheet', state.currentSheet);
                 }
                 renderAll();
                 setSyncStatus(false);
