@@ -12,10 +12,27 @@ module.exports=async function handler(req,res){
    return res.status(200).json({status:'success',sheets});
   }
   if(req.method==='POST'){
-   if(user.accessLevel>2)return res.status(403).json({status:'error',message:'Seu nível de acesso permite apenas visualizar.'});
    const {sheetName,columns,hiddenColumns,customColumns,rows}=req.body||{};
    if(typeof sheetName!=='string'||!sheetName.trim()||!Array.isArray(columns)||!Array.isArray(hiddenColumns)||!Array.isArray(customColumns)||!Array.isArray(rows))return res.status(400).json({status:'error',message:'Dados inválidos.'});
    const existing=await prisma.tab.findUnique({where:{name:sheetName.trim()}});
+   // Nível 3 pode alterar somente campos de itens já finalizados, sem mudar status,
+   // estrutura da aba ou quantidade/ordem dos registros.
+   if(user.accessLevel===3){
+    if(!existing)return res.status(403).json({status:'error',message:'Usuários de nível 3 não podem criar abas.'});
+    if(JSON.stringify(existing.columns)!==JSON.stringify(columns)||JSON.stringify(existing.hiddenColumns)!==JSON.stringify(hiddenColumns)||JSON.stringify(existing.customColumns)!==JSON.stringify(customColumns))return res.status(403).json({status:'error',message:'Usuários de nível 3 não podem alterar a estrutura das abas.'});
+    if(!Array.isArray(existing.rows)||existing.rows.length!==rows.length)return res.status(403).json({status:'error',message:'Usuários de nível 3 não podem adicionar ou excluir itens.'});
+    const statusIndex=existing.columns.indexOf('Status');
+    for(let i=0;i<rows.length;i++){
+     const before=existing.rows[i]||[];const after=rows[i]||[];
+     if(JSON.stringify(before)!==JSON.stringify(after)){
+      const wasFinalized=statusIndex>=0&&String(before[statusIndex]??'').trim().toLowerCase()==='finalizado';
+      const statusUnchanged=statusIndex>=0&&String(after[statusIndex]??'').trim().toLowerCase()==='finalizado'&&String(before[statusIndex]??'').trim().toLowerCase()==='finalizado';
+      if(!wasFinalized||!statusUnchanged)return res.status(403).json({status:'error',message:'Usuários de nível 3 só podem editar dados de itens finalizados.'});
+     }
+    }
+   } else if(user.accessLevel>2){
+    return res.status(403).json({status:'error',message:'Seu nível de acesso permite apenas visualizar itens finalizados.'});
+   }
    if(user.accessLevel===2 && existing && (JSON.stringify(existing.columns)!==JSON.stringify(columns)||JSON.stringify(existing.hiddenColumns)!==JSON.stringify(hiddenColumns)||JSON.stringify(existing.customColumns)!==JSON.stringify(customColumns)))return res.status(403).json({status:'error',message:'Somente nível 1 pode alterar a estrutura das abas.'});
    if(user.accessLevel===2 && !existing)return res.status(403).json({status:'error',message:'Somente nível 1 pode criar abas.'});
    await prisma.tab.upsert({where:{name:sheetName.trim()},update:{columns,hiddenColumns,customColumns,rows},create:{name:sheetName.trim(),columns,hiddenColumns,customColumns,rows}});
